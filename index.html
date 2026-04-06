@@ -5,45 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HUD AI Target System</title>
     <style>
-        body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: monospace; }
-        #container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        
-        /* Видео на заднем плане */
-        video { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6) contrast(1.2); }
-        
-        /* Слой интерфейса */
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        #container { position: relative; width: 100vw; height: 100vh; }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-
-        #status {
+        
+        #overlay {
             position: absolute; top: 20px; left: 20px; color: #0f0; 
-            text-shadow: 0 0 5px #0f0; font-size: 12px; z-index: 10;
+            text-shadow: 0 0 5px #0f0; font-size: 14px; z-index: 10;
+        }
+
+        #startBtn {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 15px 30px; background: none; border: 2px solid #0f0; color: #0f0;
+            font-family: inherit; cursor: pointer; z-index: 20; box-shadow: 0 0 10px #0f0;
         }
     </style>
 </head>
 <body>
 
 <div id="container">
-    <div id="status">SYSTEM: INITIALIZING...<br>AI: LOADING_MODEL</div>
+    <button id="startBtn">INITIALIZE SYSTEM</button>
+    <div id="overlay">SYSTEM: STANDBY</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="hudCanvas"></canvas>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
 
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('hudCanvas');
 const ctx = canvas.getContext('2d');
-const status = document.getElementById('status');
+const startBtn = document.getElementById('startBtn');
+const overlay = document.getElementById('overlay');
 
 let model;
-let target = { x: 0, y: 0, w: 0, h: 0, active: false };
-let currentPos = { x: 0, y: 0 }; // Для плавной анимации
+let target = { x: 0, y: 0, active: false };
+let currentPos = { x: window.innerWidth/2, y: window.innerHeight/2 };
 let isLocked = false;
 
-// 1. Инициализация камеры
-async function init() {
+// 1. Запуск системы по кнопке (важно для iOS/Android)
+startBtn.onclick = async () => {
+    startBtn.style.display = 'none';
+    overlay.innerHTML = "SYSTEM: BOOTING...<br>AI: LOADING_MODEL";
+    
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
@@ -51,122 +58,123 @@ async function init() {
         });
         video.srcObject = stream;
         
-        status.innerHTML = "SYSTEM: ONLINE<br>AI: LOADING MODEL...";
         model = await cocoSsd.load();
-        status.innerHTML = "SYSTEM: ONLINE<br>AI: READY";
+        overlay.innerHTML = "SYSTEM: ONLINE<br>AI: SCANNING";
         
         resize();
-        window.addEventListener('resize', resize);
         detectFrame();
         draw();
     } catch (err) {
-        status.innerHTML = "ERROR: CAMERA_ACCESS_DENIED";
+        overlay.innerHTML = "ERROR: ACCESS_DENIED";
         console.error(err);
     }
-}
+};
 
 function resize() {
     canvas.width = window.innerWidth * window.devicePixelRatio;
     canvas.height = window.innerHeight * window.devicePixelRatio;
 }
 
-// 2. Детекция (цикл нейронки отделен от отрисовки для производительности)
+// 2. Логика нейронки
 async function detectFrame() {
-    if (model) {
+    if (model && video.readyState === 4) {
         const predictions = await model.detect(video);
         
         if (predictions.length > 0) {
-            // Берем первый попавшийся объект (или можно фильтровать по 'person')
-            const p = predictions[0];
+            const p = predictions[0]; // Следим за первым объектом
             const [x, y, w, h] = p.bbox;
             
-            // Переводим координаты видео в координаты экрана
-            const scaleX = window.innerWidth / video.videoWidth;
-            const scaleY = window.innerHeight / video.videoHeight;
+            // Расчет масштаба относительно видео
+            const vW = video.videoWidth;
+            const vH = video.videoHeight;
+            const sW = window.innerWidth;
+            const sH = window.innerHeight;
+
+            // Корректный маппинг координат object-fit: cover
+            const videoRatio = vW / vH;
+            const screenRatio = sW / sH;
             
-            target.x = (x + w/2) * scaleX;
-            target.y = (y + h/2) * scaleY;
+            let finalX, finalY;
+            if (videoRatio > screenRatio) {
+                let realW = sH * videoRatio;
+                finalX = (x + w/2) * (realW / vW) - (realW - sW) / 2;
+                finalY = (y + h/2) * (sH / vH);
+            } else {
+                let realH = sW / videoRatio;
+                finalX = (x + w/2) * (sW / vW);
+                finalY = (y + h/2) * (realH / vH) - (realH - sH) / 2;
+            }
+
+            target.x = finalX;
+            target.y = finalY;
             target.active = true;
             
-            // Проверка "захвата" (если центр прицела близок к центру объекта)
+            // Захват цели (дистанция до центра)
             let dist = Math.hypot(currentPos.x - target.x, currentPos.y - target.y);
-            isLocked = dist < 50;
+            isLocked = dist < 60;
             
-            status.innerHTML = `SYSTEM: ONLINE<br>TARGET: ${p.class.toUpperCase()}<br>CONF: ${Math.round(p.score*100)}%`;
+            overlay.innerHTML = `STATUS: ACTIVE<br>TARGET: ${p.class.toUpperCase()}<br>LOCK: ${isLocked ? 'YES' : 'NO'}`;
         } else {
             target.active = false;
             isLocked = false;
-            status.innerHTML = "SYSTEM: ONLINE<br>TARGET: SEARCHING...";
+            overlay.innerHTML = "STATUS: ACTIVE<br>TARGET: SEARCHING...";
         }
     }
-    setTimeout(detectFrame, 100); // Ограничиваем частоту нейронки для экономии заряда
+    requestAnimationFrame(() => setTimeout(detectFrame, 60)); 
 }
 
-// 3. Отрисовка (60 FPS)
+// 3. Отрисовка прицела
 function draw() {
-    const dpr = window.devicePixelRatio;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio;
+
+    const tx = target.active ? target.x : window.innerWidth / 2;
+    const ty = target.active ? target.y : window.innerHeight / 2;
+
+    // Сглаживание движения
+    currentPos.x += (tx - currentPos.x) * 0.2;
+    currentPos.y += (ty - currentPos.y) * 0.2;
+
+    const cx = currentPos.x * dpr;
+    const cy = currentPos.y * dpr;
+    const color = isLocked ? "#ff3300" : "#ffffff";
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3 * dpr;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = color;
+
+    // Отрисовка центрального уголка (как на фото)
+    const s = 25 * dpr;
+    const g = 12 * dpr;
     
-    const screenCX = window.innerWidth / 2;
-    const screenCY = window.innerHeight / 2;
+    ctx.beginPath();
+    // 4 уголка
+    ctx.moveTo(cx - s, cy - g); ctx.lineTo(cx - s, cy - s); ctx.lineTo(cx - g, cy - s);
+    ctx.moveTo(cx + g, cy - s); ctx.lineTo(cx + s, cy - s); ctx.lineTo(cx + s, cy - g);
+    ctx.moveTo(cx - s, cy + g); ctx.lineTo(cx - s, cy + s); ctx.lineTo(cx - g, cy + s);
+    ctx.moveTo(cx + g, cy + s); ctx.lineTo(cx + s, cy + s); ctx.lineTo(cx + s, cy + g);
+    ctx.stroke();
 
-    // Если цели нет, прицел возвращается в центр экрана
-    const tx = target.active ? target.x : screenCX;
-    const ty = target.active ? target.y : screenCY;
+    // Боковые скобки
+    ctx.beginPath();
+    ctx.lineWidth = 2 * dpr;
+    ctx.arc(cx, cy, 90 * dpr, 0.8 * Math.PI, 1.2 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 90 * dpr, -0.2 * Math.PI, 0.2 * Math.PI);
+    ctx.stroke();
 
-    // Плавное следование (Lerp)
-    currentPos.x += (tx - currentPos.x) * 0.15;
-    currentPos.y += (ty - currentPos.y) * 0.15;
-
-    drawReticle(currentPos.x * dpr, currentPos.y * dpr);
+    // Горизонтальные черточки
+    ctx.beginPath();
+    ctx.moveTo(cx - 55 * dpr, cy); ctx.lineTo(cx - 35 * dpr, cy);
+    ctx.moveTo(cx + 55 * dpr, cy); ctx.lineTo(cx + 35 * dpr, cy);
+    ctx.stroke();
 
     requestAnimationFrame(draw);
 }
 
-function drawReticle(cx, cy) {
-    const color = isLocked ? "#ff3300" : "#00ff44";
-    const size = 30;
-    const gap = 15;
-    
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = color;
-
-    // Центральный маркер
-    ctx.beginPath();
-    // Верх-лево
-    ctx.moveTo(cx - size, cy - size + 10); ctx.lineTo(cx - size, cy - size); ctx.lineTo(cx - size + 10, cy - size);
-    // Верх-право
-    ctx.moveTo(cx + size - 10, cy - size); ctx.lineTo(cx + size, cy - size); ctx.lineTo(cx + size, cy - size + 10);
-    // Низ-лево
-    ctx.moveTo(cx - size, cy + size - 10); ctx.lineTo(cx - size, cy + size); ctx.lineTo(cx - size + 10, cy + size);
-    // Низ-право
-    ctx.moveTo(cx + size - 10, cy + size); ctx.lineTo(cx + size, cy + size); ctx.lineTo(cx + size, cy + size - 10);
-    ctx.stroke();
-
-    // Боковые дуги (скобки)
-    ctx.beginPath();
-    ctx.lineWidth = 2;
-    // Левая дуга
-    ctx.arc(cx, cy, 80, 0.8 * Math.PI, 1.2 * Math.PI);
-    ctx.stroke();
-    ctx.beginPath();
-    // Правая дуга
-    ctx.arc(cx, cy, 80, -0.2 * Math.PI, 0.2 * Math.PI);
-    ctx.stroke();
-    
-    // Линии по бокам
-    ctx.beginPath();
-    ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 30, cy);
-    ctx.moveTo(cx + 50, cy); ctx.lineTo(cx + 30, cy);
-    ctx.stroke();
-    
-    ctx.shadowBlur = 0;
-}
-
-init();
+window.onresize = resize;
 </script>
-
 </body>
 </html>
