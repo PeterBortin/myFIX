@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HUD AI Target System</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: monospace; }
+        #container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        
+        /* Видео на заднем плане */
+        video { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6) contrast(1.2); }
+        
+        /* Слой интерфейса */
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+        #status {
+            position: absolute; top: 20px; left: 20px; color: #0f0; 
+            text-shadow: 0 0 5px #0f0; font-size: 12px; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <div id="status">SYSTEM: INITIALIZING...<br>AI: LOADING_MODEL</div>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="hudCanvas"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('hudCanvas');
+const ctx = canvas.getContext('2d');
+const status = document.getElementById('status');
+
+let model;
+let target = { x: 0, y: 0, w: 0, h: 0, active: false };
+let currentPos = { x: 0, y: 0 }; // Для плавной анимации
+let isLocked = false;
+
+// 1. Инициализация камеры
+async function init() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+            audio: false
+        });
+        video.srcObject = stream;
+        
+        status.innerHTML = "SYSTEM: ONLINE<br>AI: LOADING MODEL...";
+        model = await cocoSsd.load();
+        status.innerHTML = "SYSTEM: ONLINE<br>AI: READY";
+        
+        resize();
+        window.addEventListener('resize', resize);
+        detectFrame();
+        draw();
+    } catch (err) {
+        status.innerHTML = "ERROR: CAMERA_ACCESS_DENIED";
+        console.error(err);
+    }
+}
+
+function resize() {
+    canvas.width = window.innerWidth * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+}
+
+// 2. Детекция (цикл нейронки отделен от отрисовки для производительности)
+async function detectFrame() {
+    if (model) {
+        const predictions = await model.detect(video);
+        
+        if (predictions.length > 0) {
+            // Берем первый попавшийся объект (или можно фильтровать по 'person')
+            const p = predictions[0];
+            const [x, y, w, h] = p.bbox;
+            
+            // Переводим координаты видео в координаты экрана
+            const scaleX = window.innerWidth / video.videoWidth;
+            const scaleY = window.innerHeight / video.videoHeight;
+            
+            target.x = (x + w/2) * scaleX;
+            target.y = (y + h/2) * scaleY;
+            target.active = true;
+            
+            // Проверка "захвата" (если центр прицела близок к центру объекта)
+            let dist = Math.hypot(currentPos.x - target.x, currentPos.y - target.y);
+            isLocked = dist < 50;
+            
+            status.innerHTML = `SYSTEM: ONLINE<br>TARGET: ${p.class.toUpperCase()}<br>CONF: ${Math.round(p.score*100)}%`;
+        } else {
+            target.active = false;
+            isLocked = false;
+            status.innerHTML = "SYSTEM: ONLINE<br>TARGET: SEARCHING...";
+        }
+    }
+    setTimeout(detectFrame, 100); // Ограничиваем частоту нейронки для экономии заряда
+}
+
+// 3. Отрисовка (60 FPS)
+function draw() {
+    const dpr = window.devicePixelRatio;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const screenCX = window.innerWidth / 2;
+    const screenCY = window.innerHeight / 2;
+
+    // Если цели нет, прицел возвращается в центр экрана
+    const tx = target.active ? target.x : screenCX;
+    const ty = target.active ? target.y : screenCY;
+
+    // Плавное следование (Lerp)
+    currentPos.x += (tx - currentPos.x) * 0.15;
+    currentPos.y += (ty - currentPos.y) * 0.15;
+
+    drawReticle(currentPos.x * dpr, currentPos.y * dpr);
+
+    requestAnimationFrame(draw);
+}
+
+function drawReticle(cx, cy) {
+    const color = isLocked ? "#ff3300" : "#00ff44";
+    const size = 30;
+    const gap = 15;
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = color;
+
+    // Центральный маркер
+    ctx.beginPath();
+    // Верх-лево
+    ctx.moveTo(cx - size, cy - size + 10); ctx.lineTo(cx - size, cy - size); ctx.lineTo(cx - size + 10, cy - size);
+    // Верх-право
+    ctx.moveTo(cx + size - 10, cy - size); ctx.lineTo(cx + size, cy - size); ctx.lineTo(cx + size, cy - size + 10);
+    // Низ-лево
+    ctx.moveTo(cx - size, cy + size - 10); ctx.lineTo(cx - size, cy + size); ctx.lineTo(cx - size + 10, cy + size);
+    // Низ-право
+    ctx.moveTo(cx + size - 10, cy + size); ctx.lineTo(cx + size, cy + size); ctx.lineTo(cx + size, cy + size - 10);
+    ctx.stroke();
+
+    // Боковые дуги (скобки)
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    // Левая дуга
+    ctx.arc(cx, cy, 80, 0.8 * Math.PI, 1.2 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    // Правая дуга
+    ctx.arc(cx, cy, 80, -0.2 * Math.PI, 0.2 * Math.PI);
+    ctx.stroke();
+    
+    // Линии по бокам
+    ctx.beginPath();
+    ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 30, cy);
+    ctx.moveTo(cx + 50, cy); ctx.lineTo(cx + 30, cy);
+    ctx.stroke();
+    
+    ctx.shadowBlur = 0;
+}
+
+init();
+</script>
+
+</body>
+</html>
