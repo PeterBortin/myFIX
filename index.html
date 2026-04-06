@@ -3,32 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD AI Target System v2.1</title>
+    <title>HUD TACTICAL AI v3.0</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         #container { position: relative; width: 100vw; height: 100vh; }
-        video { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.7) contrast(1.1); }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.6) contrast(1.2) saturate(0.8); }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
         #overlay {
             position: absolute; top: 20px; left: 20px; color: #0f0; 
-            text-shadow: 0 0 5px #0f0; font-size: 14px; z-index: 10;
+            text-shadow: 0 0 8px #0f0; font-size: 12px; z-index: 10; letter-spacing: 1px;
         }
 
         #startBtn {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 15px 30px; background: none; border: 2px solid #0f0; color: #0f0;
-            font-family: inherit; cursor: pointer; z-index: 20; box-shadow: 0 0 10px #0f0;
-            transition: 0.3s;
+            padding: 15px 35px; background: none; border: 1px solid #0f0; color: #0f0;
+            font-family: inherit; cursor: pointer; z-index: 20; box-shadow: 0 0 15px rgba(0,255,0,0.3);
+            text-transform: uppercase; letter-spacing: 2px;
         }
-        #startBtn:hover { background: rgba(0,255,0,0.2); }
     </style>
 </head>
 <body>
 
 <div id="container">
-    <button id="startBtn">INITIALIZE SYSTEM</button>
-    <div id="overlay">SYSTEM: STANDBY</div>
+    <button id="startBtn">Initialize HUD</button>
+    <div id="overlay">OS: NEURAL_LINK_v4 // STATUS: STANDBY</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="hudCanvas"></canvas>
 </div>
@@ -44,33 +43,26 @@ const startBtn = document.getElementById('startBtn');
 const overlay = document.getElementById('overlay');
 
 let model;
-let currentTarget = null; // Полный объект детекции
 let targetPos = { x: 0, y: 0, active: false };
 let currentPos = { x: window.innerWidth/2, y: window.innerHeight/2 };
 let isLocked = false;
-let pulseTime = 0; // Для анимации пульсации
-let infoLines = []; // Строки текста
+let pulseTime = 0;
+let textTick = 0;
+let infoLines = [];
 
 startBtn.onclick = async () => {
     startBtn.style.display = 'none';
-    overlay.innerHTML = "SYSTEM: BOOTING...<br>AI: LOADING_MODEL";
-    
+    overlay.innerHTML = "BOOTING... [RECOGNITION_CORE_LOADED]";
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
-        
         model = await cocoSsd.load();
-        overlay.innerHTML = "SYSTEM: ONLINE<br>AI: SCANNING";
-        
+        overlay.innerHTML = "OS: ACTIVE // LINK: STABLE // SCANNING...";
         resize();
         detectFrame();
         draw();
     } catch (err) {
-        overlay.innerHTML = "ERROR: ACCESS_DENIED";
-        console.error(err);
+        overlay.innerHTML = "FATAL ERROR: SENSOR_ACCESS_DENIED";
     }
 };
 
@@ -82,73 +74,35 @@ function resize() {
 async function detectFrame() {
     if (model && video.readyState === 4) {
         const predictions = await model.detect(video);
-        
         if (predictions.length > 0) {
             const p = predictions[0];
             const [x, y, w, h] = p.bbox;
-            
-            const vW = video.videoWidth;
-            const vH = video.videoHeight;
-            const sW = window.innerWidth;
-            const sH = window.innerHeight;
+            const sX = window.innerWidth / video.videoWidth;
+            const sY = window.innerHeight / video.videoHeight;
 
-            const videoRatio = vW / vH;
-            const screenRatio = sW / sH;
-            
-            let finalX, finalY;
-            if (videoRatio > screenRatio) {
-                let realW = sH * videoRatio;
-                finalX = (x + w/2) * (realW / vW) - (realW - sW) / 2;
-                finalY = (y + h/2) * (sH / vH);
-            } else {
-                let realH = sW / videoRatio;
-                finalX = (x + w/2) * (sW / vW);
-                finalY = (y + h/2) * (realH / vH) - (realH - sH) / 2;
-            }
-
-            targetPos.x = finalX;
-            targetPos.y = finalY;
+            targetPos.x = (x + w/2) * sX;
+            targetPos.y = (y + h/2) * sY;
             targetPos.active = true;
-            currentTarget = p; // Сохраняем весь объект
             
             let dist = Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y);
-            let prevLock = isLocked;
-            isLocked = dist < 70; // Увеличил радиус захвата
-            
-            // Если статус захвата изменился, генерируем текст
-            if (isLocked && !prevLock) {
-                generateInfoText(p);
-            }
+            let wasLocked = isLocked;
+            isLocked = dist < 80;
 
-            overlay.innerHTML = `STATUS: ACTIVE<br>TARGET: ${p.class.toUpperCase()}<br>LOCK: ${isLocked ? 'YES' : 'NO'}`;
+            if (isLocked && !wasLocked) {
+                textTick = 0;
+                infoLines = [
+                    `TARGET: ${p.class.toUpperCase()}`,
+                    `PROB: ${Math.round(p.score * 100)}%`,
+                    `STATUS: LOCKED`,
+                    `COORD: ${Math.floor(targetPos.x)}.${Math.floor(targetPos.y)}`
+                ];
+            }
         } else {
             targetPos.active = false;
             isLocked = false;
-            currentTarget = null;
-            overlay.innerHTML = "STATUS: ACTIVE<br>TARGET: SEARCHING...";
         }
     }
-    setTimeout(detectFrame, 60); 
-}
-
-// Генерация 4 строк фейкового описания
-function generateInfoText(pred) {
-    const cls = pred.class.toUpperCase();
-    const conf = Math.round(pred.score * 100);
-    const time = new Date().toLocaleTimeString('ru-RU', { hour12: false });
-    
-    // Создаем разные варианты "описания" для разных типов объектов
-    let type = 'OBJECT';
-    if (['person', 'cat', 'dog'].includes(pred.class)) type = 'BIOMETRIC';
-    if (['cell phone', 'laptop', 'tv'].includes(pred.class)) type = 'DIGITAL_NODE';
-    if (['cup', 'bottle', 'bowl'].includes(pred.class)) type = 'PASSIVE_GEAR';
-
-    infoLines = [
-        `> ID: ${cls}_${conf}`,
-        `> TYPE: ${type}`,
-        `> STATUS: TRACKED`,
-        `> TS: ${time}`
-    ];
+    setTimeout(detectFrame, 60);
 }
 
 function draw() {
@@ -158,30 +112,30 @@ function draw() {
     const tx = targetPos.active ? targetPos.x : window.innerWidth / 2;
     const ty = targetPos.active ? targetPos.y : window.innerHeight / 2;
 
-    currentPos.x += (tx - currentPos.x) * 0.2;
-    currentPos.y += (ty - currentPos.y) * 0.2;
+    currentPos.x += (tx - currentPos.x) * 0.15;
+    currentPos.y += (ty - currentPos.y) * 0.15;
 
-    const cx = currentPos.x * dpr;
-    const cy = currentPos.y * dpr;
+    // Глитч-эффект при захвате
+    let shakeX = isLocked ? (Math.random() - 0.5) * 3 : 0;
+    let shakeY = isLocked ? (Math.random() - 0.5) * 3 : 0;
+
+    const cx = (currentPos.x + shakeX) * dpr;
+    const cy = (currentPos.y + shakeY) * dpr;
     
-    // --- Анимация пульсации ---
-    pulseTime += 0.15; // Скорость пульсации
-    // Pulse value от 0.95 до 1.05
-    const pulseScale = isLocked ? (1 + Math.sin(pulseTime) * 0.05) : 1; 
-
-    // Основной цвет (белый -> красный)
-    const color = isLocked ? "#ff3300" : "#ffffff";
+    pulseTime += 0.1;
+    const pulseScale = isLocked ? (1 + Math.sin(pulseTime * 2) * 0.04) : 1;
+    const color = isLocked ? "#ff1100" : "#ffffff";
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 3 * dpr;
-    ctx.shadowBlur = 15;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2 * dpr;
+    ctx.shadowBlur = isLocked ? 15 : 5;
     ctx.shadowColor = color;
 
-    // --- Отрисовка прицела с учетом пульсации ---
+    // --- Центральный прицел ---
     const s = 25 * dpr * pulseScale;
-    const g = 12 * dpr * pulseScale;
-    const r = 90 * dpr * pulseScale; // Радиус дуг
-
+    const g = 10 * dpr * pulseScale;
+    
     ctx.beginPath();
     // 4 уголка
     ctx.moveTo(cx - s, cy - g); ctx.lineTo(cx - s, cy - s); ctx.lineTo(cx - g, cy - s);
@@ -190,55 +144,63 @@ function draw() {
     ctx.moveTo(cx + g, cy + s); ctx.lineTo(cx + s, cy + s); ctx.lineTo(cx + s, cy + g);
     ctx.stroke();
 
-    // Боковые дуги
-    ctx.beginPath();
-    ctx.lineWidth = 2 * dpr;
-    ctx.arc(cx, cy, r, 0.8 * Math.PI, 1.2 * Math.PI);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, -0.2 * Math.PI, 0.2 * Math.PI);
-    ctx.stroke();
-
-    // Горизонтальные черточки
-    const cSize = 55 * dpr * pulseScale;
-    const cGap = 35 * dpr * pulseScale;
-    ctx.beginPath();
-    ctx.moveTo(cx - cSize, cy); ctx.lineTo(cx - cGap, cy);
-    ctx.moveTo(cx + cSize, cy); ctx.lineTo(cx + cGap, cy);
-    ctx.stroke();
-
-    // --- Отрисовка Информационного блока ---
+    // Дополнительный внутренний прицел в Lock режиме
     if (isLocked) {
-        drawInfoBlock(cx, cy, dpr, color);
+        const sSmall = 10 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(cx - sSmall, cy); ctx.lineTo(cx + sSmall, cy);
+        ctx.moveTo(cx, cy - sSmall); ctx.lineTo(cx, cy + sSmall);
+        ctx.stroke();
+    }
+
+    // --- Боковые сегментированные дуги ---
+    ctx.lineWidth = 3 * dpr;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 95 * dpr * pulseScale, 0.8 * Math.PI, 1.2 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 95 * dpr * pulseScale, -0.2 * Math.PI, 0.2 * Math.PI);
+    ctx.stroke();
+
+    // --- Горизонтальные черточки ---
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(cx - 60 * dpr, cy); ctx.lineTo(cx - 35 * dpr, cy);
+    ctx.moveTo(cx + 60 * dpr, cy); ctx.lineTo(cx + 35 * dpr, cy);
+    ctx.stroke();
+
+    // --- Шкалы слева и справа ---
+    ctx.lineWidth = 1 * dpr;
+    for (let i = -3; i <= 3; i++) {
+        let yOffset = cy + (i * 25 * dpr);
+        ctx.beginPath();
+        ctx.moveTo(cx - 130 * dpr, yOffset); ctx.lineTo(cx - 120 * dpr, yOffset);
+        ctx.moveTo(cx + 130 * dpr, yOffset); ctx.lineTo(cx + 120 * dpr, yOffset);
+        ctx.stroke();
+    }
+
+    // --- Печатающийся текст справа ---
+    if (isLocked) {
+        textTick += 0.3;
+        const fontSize = 14 * dpr;
+        ctx.font = `bold ${fontSize}px 'Courier New'`;
+        ctx.textAlign = 'left';
+
+        infoLines.forEach((line, index) => {
+            let count = Math.floor(textTick - (index * 4));
+            if (count > 0) {
+                let txt = "> " + line.substring(0, count);
+                ctx.fillText(txt, cx + 120 * dpr, cy - 35 * dpr + (index * fontSize * 1.5));
+            }
+        });
+        
+        // Мигающий курсор
+        if (Math.floor(pulseTime * 3) % 2 === 0) {
+            ctx.fillRect(cx + 120 * dpr, cy + 50 * dpr, 10 * dpr, 2 * dpr);
+        }
     }
 
     requestAnimationFrame(draw);
-}
-
-// Функция отрисовки текста слева
-function drawInfoBlock(cx, cy, dpr, color) {
-    const fontSize = 16 * dpr;
-    ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
-    ctx.fillStyle = color;
-    ctx.shadowBlur = 10;
-    ctx.textAlign = 'left';
-
-    // Отступ влево от края прицела
-    const offsetX = -130 * dpr;
-    const offsetY = -40 * dpr; // Центр текста
-
-    infoLines.forEach((line, index) => {
-        // Эффект "печатной машинки" через Math.min
-        const textToDraw = line.substring(0, Math.floor(pulseTime * 5));
-        ctx.fillText(textToDraw, cx + offsetX, cy + offsetY + (index * fontSize * 1.3));
-    });
-    
-    // Дополнительный декор: вертикальная линия
-    ctx.beginPath();
-    ctx.lineWidth = 1.5 * dpr;
-    ctx.moveTo(cx + offsetX - 10 * dpr, cy + offsetY - 10 * dpr);
-    ctx.lineTo(cx + offsetX - 10 * dpr, cy + offsetY + (infoLines.length * fontSize * 1.3));
-    ctx.stroke();
 }
 
 window.onresize = resize;
