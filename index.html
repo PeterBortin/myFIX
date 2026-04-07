@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD TACTICAL v11.0 // EW_INTERFERENCE</title>
+    <title>myFIX</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         #container { position: relative; width: 100vw; height: 100vh; }
@@ -28,7 +28,7 @@
 <body>
 
 <div id="container">
-    <button id="startBtn">SYNC_NEURAL_LINK</button>
+    <button id="startBtn">search for fix</button>
     <div id="terminal"></div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="hudCanvas"></canvas>
@@ -71,17 +71,17 @@ function logToTerminal(msg) {
 
 startBtn.onclick = async () => {
     startBtn.style.display = 'none';
-    logToTerminal("INIT_BOOT_SEQUENCE...");
+    logToTerminal("boot..");
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
         model = await cocoSsd.load();
-        logToTerminal("NEURAL_NET_READY");
+        logToTerminal("network ready..");
         resize();
         detectFrame();
         draw();
     } catch (err) {
-        logToTerminal("LINK_FAILED");
+        logToTerminal("link failed");
     }
 };
 
@@ -124,11 +124,11 @@ async function detectFrame() {
 
 function generateInfo(p) {
     infoLines = [
-        `TARGET: ${p.class.toUpperCase()}`,
-        `ID: 0x${Math.random().toString(16).slice(2,8)}`,
-        `SECTOR: 07-A`,
-        `STATUS: LOCK_ON`,
-        `PROB: ${Math.round(p.score * 100)}%`
+        `target: ${p.class.toUpperCase()}`,
+        `id: 0x${Math.random().toString(16).slice(2,8)}`,
+        `sector: 07-A`,
+        `status: lock ON`,
+        `prob: ${Math.round(p.score * 100)}%`
     ];
 }
 
