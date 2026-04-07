@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD TACTICAL AI v5.1</title>
+    <title>HUD TACTICAL AI v6.0 // SMOOTH_TRACK</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         #container { position: relative; width: 100vw; height: 100vh; }
@@ -27,8 +27,8 @@
 <body>
 
 <div id="container">
-    <button id="startBtn">Initialize CORE_V5</button>
-    <div id="overlay">NEURAL_LINK [BOOTING] // OS_STATUS: STANDBY</div>
+    <button id="startBtn">Initialize CORE_V6</button>
+    <div id="overlay">NEURAL_LINK [STABILIZING] // OS_STATUS: STANDBY</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="hudCanvas"></canvas>
 </div>
@@ -44,13 +44,14 @@ const startBtn = document.getElementById('startBtn');
 const overlay = document.getElementById('overlay');
 
 let model;
-let targetPos = { x: 0, y: 0, active: false };
+let targetPos = { x: window.innerWidth/2, y: window.innerHeight/2, active: false };
 let currentPos = { x: window.innerWidth/2, y: window.innerHeight/2 };
 let isLocked = false;
+let lockFactor = 0; // Плавный переход между 0 (standby) и 1 (locked)
 let pulseTime = 0;
 let textTick = 0;
 let infoLines = [];
-let allPredictions = []; // Хранилище для всех объектов в кадре
+let allPredictions = [];
 
 startBtn.onclick = async () => {
     startBtn.style.display = 'none';
@@ -76,49 +77,45 @@ function resize() {
 async function detectFrame() {
     if (model && video.readyState === 4) {
         const predictions = await model.detect(video);
-        allPredictions = predictions; // Сохраняем все детекции
+        allPredictions = predictions;
 
         if (predictions.length > 0) {
-            const p = predictions[0]; // Следим за первым (самым вероятным)
+            // Берем самый уверенный объект
+            const p = predictions[0];
             const [x, y, w, h] = p.bbox;
             const sX = window.innerWidth / video.videoWidth;
             const sY = window.innerHeight / video.videoHeight;
 
+            // Целевая позиция
             targetPos.x = (x + w/2) * sX;
             targetPos.y = (y + h/2) * sY;
             targetPos.active = true;
             
             let dist = Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y);
             let wasLocked = isLocked;
-            isLocked = dist < 85; // Увеличил радиус захвата
+            isLocked = dist < 120; // Увеличен радиус для мягкости захвата
 
             if (isLocked && !wasLocked) {
                 textTick = 0;
                 generateInfoText(p, targetPos);
             }
         } else {
+            // Если объектов нет, медленно возвращаем "цель" в центр, чтобы не было прыжка
             targetPos.active = false;
-            isLocked = false;
         }
     }
-    setTimeout(detectFrame, 60);
+    setTimeout(detectFrame, 50);
 }
 
-// Генерация более детализированного текста справа
 function generateInfoText(pred, pos) {
     const cls = pred.class.toUpperCase();
     const conf = Math.round(pred.score * 100);
     const time = new Date().toLocaleTimeString('ru-RU', { hour12: false });
-    
-    // Генерируем фейковые векторы/координаты
-    const vec = `[${(Math.random()*10).toFixed(2)}, ${(Math.random()*10).toFixed(2)}, ${(Math.random()*10).toFixed(2)}]`;
-    const coord = `${Math.floor(pos.x)}:${Math.floor(pos.y)}`;
-
     infoLines = [
         `ID: ${cls}_${conf}`,
-        `MODE: LOCK_ENGAGED`,
-        `VECTOR: ${vec}`,
-        `COORD: ${coord}`,
+        `MODE: LOCK_STABLE`,
+        `DIST: ANALYZING...`,
+        `COORD: ${Math.floor(pos.x)}:${Math.floor(pos.y)}`,
         `TS: ${time}`
     ];
 }
@@ -127,183 +124,160 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const dpr = window.devicePixelRatio;
 
-    // Плавное следование за целью или возврат в центр
-    const tx = targetPos.active ? targetPos.x : window.innerWidth / 2;
-    const ty = targetPos.active ? targetPos.y : window.innerHeight / 2;
-    currentPos.x += (tx - currentPos.x) * 0.15;
-    currentPos.y += (ty - currentPos.y) * 0.15;
+    // ПЛАВНОЕ СЛЕДОВАНИЕ (LERP)
+    // Если цели нет, плавно идем к центру. Если есть — к цели.
+    const destX = targetPos.active ? targetPos.x : window.innerWidth / 2;
+    const destY = targetPos.active ? targetPos.y : window.innerHeight / 2;
+    
+    // Коэффициент 0.1 дает очень мягкое "кинематографичное" движение
+    currentPos.x += (destX - currentPos.x) * 0.12;
+    currentPos.y += (destY - currentPos.y) * 0.12;
 
-    // Глитч и мерцание при захвате
-    let shakeX = isLocked ? (Math.random() - 0.5) * 5 : 0;
-    let shakeY = isLocked ? (Math.random() - 0.5) * 3 : 0;
-    let flickeringOpacity = isLocked ? 1 - Math.random() * 0.2 : 1;
+    // Плавное изменение состояния Lock (от 0 до 1)
+    if (isLocked && targetPos.active) {
+        if (lockFactor < 1) lockFactor += 0.05;
+    } else {
+        if (lockFactor > 0) lockFactor -= 0.05;
+    }
+
+    let shakeX = (Math.random() - 0.5) * (5 * lockFactor);
+    let shakeY = (Math.random() - 0.5) * (3 * lockFactor);
 
     const cx = (currentPos.x + shakeX) * dpr;
     const cy = (currentPos.y + shakeY) * dpr;
     
-    pulseTime += 0.1;
-    const pulseScale = isLocked ? (1 + Math.sin(pulseTime * 2) * 0.05) : 1;
-    const color = isLocked ? "#ff1100" : "#ffffff";
+    pulseTime += 0.08;
+    const pulseScale = 1 + (Math.sin(pulseTime * 2) * 0.03 * lockFactor);
+    
+    // Плавный переход цвета между белым и красным
+    const r = Math.floor(255);
+    const g = Math.floor(255 - (240 * lockFactor));
+    const b = Math.floor(255 - (255 * lockFactor));
+    const color = `rgb(${r},${g},${b})`;
 
-    ctx.globalAlpha = flickeringOpacity;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = 2 * dpr;
-    ctx.shadowBlur = isLocked ? 20 : 8;
+    ctx.shadowBlur = 5 + (15 * lockFactor);
     ctx.shadowColor = color;
-    ctx.textAlign = 'left';
 
-    // --- 1. Отрисовка подсветок ВСЕХ объектов (Standby режим) ---
+    // 1. Подсветка всех объектов (всегда мягкая)
     drawAllObjects(dpr);
 
-    // --- 2. Отрисовка динамических шкал по бокам ---
-    drawSideScales(cx, cy, dpr);
+    // 2. Боковые шкалы
+    drawSideScales(cx, cy, dpr, lockFactor);
 
-    // --- 3. Отрисовка центрального прицела (Режимы Standby и Lock) ---
-    drawMainReticle(cx, cy, dpr, pulseScale, color);
+    // 3. Улучшенный прицел
+    drawAdvancedReticle(cx, cy, dpr, pulseScale, lockFactor);
 
-    // --- 4. Отрисовка текста справа ---
-    if (isLocked) {
+    // 4. Текст (только если lockFactor > 0.5)
+    if (lockFactor > 0.1) {
+        ctx.globalAlpha = lockFactor;
         drawInfoText(cx, cy, dpr);
+        ctx.globalAlpha = 1;
     }
 
     requestAnimationFrame(draw);
 }
 
-// 1. Функция подсветки всех объектов
 function drawAllObjects(dpr) {
     ctx.lineWidth = 1 * dpr;
-    ctx.shadowBlur = 0;
-    ctx.textAlign = 'left';
-    ctx.font = `${10 * dpr}px 'Courier New'`;
-
-    const vW = video.videoWidth;
-    const vH = video.videoHeight;
     const sW = window.innerWidth;
     const sH = window.innerHeight;
+    const vW = video.videoWidth || 1;
+    const vH = video.videoHeight || 1;
 
     allPredictions.forEach((p, index) => {
-        // Пропускаем объект, который уже захвачен прицелом, чтобы не дублировать
-        if (isLocked && index === 0) return; 
-
         const [x, y, w, h] = p.bbox;
         const scaleX = sW / vW;
         const scaleY = sH / vH;
-
-        ctx.strokeStyle = "rgba(0, 255, 65, 0.2)"; // Полупрозрачный зеленый
-        ctx.fillStyle = "rgba(0, 255, 65, 0.4)";
+        
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.15)";
         ctx.strokeRect(x * scaleX * dpr, y * scaleY * dpr, w * scaleX * dpr, h * scaleY * dpr);
-        ctx.fillText(`${p.class.toUpperCase()}`, x * scaleX * dpr, y * scaleY * dpr - 5 * dpr);
     });
 }
 
-// 2. Функция отрисовки боковых шкал
-function drawSideScales(cx, cy, dpr) {
-    ctx.shadowBlur = 8 * dpr;
+function drawSideScales(cx, cy, dpr, lf) {
     ctx.lineWidth = 1 * dpr;
-    const xOff = 135 * dpr;
+    const xOff = (135 + (20 * lf)) * dpr;
     const ySize = 100 * dpr;
     
-    // Слева (высота)
     ctx.beginPath();
-    ctx.moveTo(cx - xOff, cy - ySize);
-    ctx.lineTo(cx - xOff, cy + ySize);
+    ctx.moveTo(cx - xOff, cy - ySize); ctx.lineTo(cx - xOff, cy + ySize);
+    ctx.moveTo(cx + xOff, cy - ySize); ctx.lineTo(cx + xOff, cy + ySize);
     ctx.stroke();
 
-    // Справа (азимут)
-    ctx.beginPath();
-    ctx.moveTo(cx + xOff, cy - ySize);
-    ctx.lineTo(cx + xOff, cy + ySize);
-    ctx.stroke();
-
-    // Маркеры шкал (пульсирующие черточки)
-    for (let i = -4; i <= 4; i++) {
-        let yOffset = cy + (i * 22 * dpr);
-        let opacity = 1 - Math.abs(i) * 0.15;
-        let lineLength = (i % 2 === 0) ? 15 : 10;
-        
-        ctx.strokeStyle = `rgba(${isLocked ? '255,17,0' : '255,255,255'}, ${opacity})`;
+    for (let i = -3; i <= 3; i++) {
+        let yOffset = cy + (i * 30 * dpr);
+        let len = (i === 0) ? 20 : 10;
         ctx.beginPath();
-        ctx.moveTo(cx - xOff, yOffset); ctx.lineTo(cx - xOff + lineLength * dpr, yOffset);
-        ctx.moveTo(cx + xOff, yOffset); ctx.lineTo(cx + xOff - lineLength * dpr, yOffset);
+        ctx.moveTo(cx - xOff, yOffset); ctx.lineTo(cx - xOff + len * dpr, yOffset);
+        ctx.moveTo(cx + xOff, yOffset); ctx.lineTo(cx + xOff - len * dpr, yOffset);
         ctx.stroke();
     }
 }
 
-// 3. Функция центрального прицела
-function drawMainReticle(cx, cy, dpr, pulseScale, color) {
-    ctx.lineWidth = 2 * dpr;
-    const s = 25 * dpr * pulseScale;
-    const g = 10 * dpr * pulseScale;
-    
-    // Внутренний прицел (Крестик всегда)
-    const smallS = 5 * dpr;
-    ctx.beginPath();
-    ctx.moveTo(cx - smallS, cy); ctx.lineTo(cx + smallS, cy);
-    ctx.moveTo(cx, cy - smallS); ctx.lineTo(cx, cy + smallS);
-    ctx.stroke();
+function drawAdvancedReticle(cx, cy, dpr, scale, lf) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
 
-    ctx.beginPath();
-    if (isLocked) {
-        // Режим Lock: Уголки-стрелки указывающие внутрь
-        for(let i=0; i<4; i++) {
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(i * Math.PI / 2);
-            ctx.beginPath();
-            ctx.moveTo(s, -s); ctx.lineTo(s - g, -s); ctx.lineTo(s, -s); ctx.lineTo(s, -s + g);
-            ctx.stroke();
-            ctx.restore();
-        }
-    } else {
-        // Режим Standby: Обычные уголки
-        ctx.moveTo(cx - s, cy - g); ctx.lineTo(cx - s, cy - s); ctx.lineTo(cx - g, cy - s);
-        ctx.moveTo(cx + g, cy - s); ctx.lineTo(cx + s, cy - s); ctx.lineTo(cx + s, cy - g);
-        ctx.moveTo(cx - s, cy + g); ctx.lineTo(cx - s, cy + s); ctx.lineTo(cx - g, cy + s);
-        ctx.moveTo(cx + g, cy + s); ctx.lineTo(cx + s, cy + s); ctx.lineTo(cx + s, cy + g);
+    // Вращающиеся элементы при Lock
+    if (lf > 0.1) {
+        ctx.save();
+        ctx.rotate(pulseTime);
+        ctx.lineWidth = 1 * dpr;
+        ctx.setLineDash([20, 100]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 110 * dpr, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
     }
+
+    // Внутренний крест
+    ctx.lineWidth = 2 * dpr;
+    const cs = 8 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(-cs, 0); ctx.lineTo(cs, 0);
+    ctx.moveTo(0, -cs); ctx.lineTo(0, cs);
     ctx.stroke();
 
-    // Сегментированные дуги
-    ctx.lineWidth = 3 * dpr;
-    ctx.beginPath();
-    ctx.setLineDash([15 * dpr, 10 * dpr]); // Пунктир
-    ctx.arc(cx, cy, 95 * dpr * pulseScale, 0.8 * Math.PI, 1.2 * Math.PI);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, 95 * dpr * pulseScale, -0.2 * Math.PI, 0.2 * Math.PI);
-    ctx.stroke();
-    ctx.setLineDash([]); // Сброс пунктира
+    // Основные уголки (меняют форму при Lock)
+    const s = 30 * dpr;
+    const g = 10 * dpr + (15 * lf); // Уголки "сжимаются" к центру при захвате
+    
+    for (let i = 0; i < 4; i++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(s, -s + g);
+        ctx.lineTo(s, -s);
+        ctx.lineTo(s - g, -s);
+        ctx.stroke();
+    }
 
-    // Горизонтальные черточки
-    ctx.lineWidth = 1.5 * dpr;
-    const cSize = 65 * dpr * pulseScale;
-    const cGap = 35 * dpr * pulseScale;
+    // Боковые дуги
+    ctx.setLineDash([15, 15]);
     ctx.beginPath();
-    ctx.moveTo(cx - cSize, cy); ctx.lineTo(cx - cGap, cy);
-    ctx.moveTo(cx + cSize, cy); ctx.lineTo(cx + cGap, cy);
+    ctx.arc(0, 0, 90 * dpr, -0.2 * Math.PI, 0.2 * Math.PI);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 90 * dpr, 0.8 * Math.PI, 1.2 * Math.PI);
+    ctx.stroke();
+    
+    ctx.restore();
 }
 
-// 4. Функция текста справа
 function drawInfoText(cx, cy, dpr) {
-    ctx.textAlign = 'left';
-    textTick += 0.35; // Скорость печати
-    const fontSize = 13 * dpr;
+    textTick += 0.4;
+    const fontSize = 12 * dpr;
     ctx.font = `bold ${fontSize}px 'Courier New'`;
+    ctx.textAlign = 'left';
 
     infoLines.forEach((line, index) => {
-        let count = Math.floor(textTick - (index * 4)); // Задержка для каждой строки
+        let count = Math.floor(textTick - (index * 4));
         if (count > 0) {
-            let txt = "> " + line.substring(0, count);
-            ctx.fillText(txt, cx + 130 * dpr, cy - 40 * dpr + (index * fontSize * 1.5));
+            ctx.fillText("> " + line.substring(0, count), cx + 135 * dpr, cy - 40 * dpr + (index * fontSize * 1.6));
         }
     });
-    
-    // Мигающий курсор
-    if (Math.floor(pulseTime * 3) % 2 === 0) {
-        ctx.fillRect(cx + 130 * dpr, cy + 55 * dpr, 10 * dpr, 2 * dpr);
-    }
 }
 
 window.onresize = resize;
