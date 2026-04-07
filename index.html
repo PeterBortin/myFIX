@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD TACTICAL v10.0 // TERMINATOR_GLITCH</title>
+    <title>HUD TACTICAL v11.0 // EW_INTERFERENCE</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         #container { position: relative; width: 100vw; height: 100vh; }
@@ -54,6 +54,10 @@ let textTick = 0;
 let infoLines = [];
 let glitchActive = 0;
 
+// РЭБ параметры
+let ewIntensity = 0;
+let ewTimer = 0;
+
 const RED_TARGETS = ['person', 'car', 'truck', 'bus', 'motorcycle'];
 
 function logToTerminal(msg) {
@@ -62,7 +66,6 @@ function logToTerminal(msg) {
     entry.innerHTML = `> ${msg}`;
     terminal.appendChild(entry);
     if (terminal.children.length > 18) terminal.removeChild(terminal.firstChild);
-    // Эффект помех при добавлении в красном режиме
     if (lockFactor > 0.5) glitchActive = 5;
 }
 
@@ -103,7 +106,6 @@ async function detectFrame() {
             let dist = Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y);
             let wasLocked = isLocked;
             
-            // Захват только если это человек или машина
             isLocked = dist < 120 && RED_TARGETS.includes(p.class.toLowerCase());
 
             if (isLocked && !wasLocked) {
@@ -130,6 +132,28 @@ function generateInfo(p) {
     ];
 }
 
+function drawEWInterference(dpr) {
+    // Вероятность возникновения помехи РЭБ
+    ewTimer++;
+    if (ewTimer % 200 === 0) ewIntensity = 15; 
+    
+    if (ewIntensity > 0) {
+        const shiftX = (Math.random() - 0.5) * 40 * dpr * (ewIntensity / 15);
+        ctx.translate(shiftX, 0);
+        
+        // Рисуем случайные "битые" горизонтальные линии
+        for (let i = 0; i < 5; i++) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.2})`;
+            ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 2 * dpr);
+        }
+        
+        ewIntensity--;
+        terminal.style.transform = `translateX(${(Math.random()-0.5)*10}px)`;
+    } else {
+        terminal.style.transform = `none`;
+    }
+}
+
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const dpr = window.devicePixelRatio;
@@ -149,17 +173,19 @@ function draw() {
     const cx = currentPos.x * dpr;
     const cy = currentPos.y * dpr;
     
-    // Цвет: Белый -> Красный
     const r = 255;
     const gb = Math.floor(255 * (1 - lockFactor));
     const mainColor = `rgb(${r}, ${gb}, ${gb})`;
 
-    // Синхронизируем цвет терминала
     terminal.style.color = mainColor;
 
-    // Эффект глитча
+    ctx.save();
+    
+    // Эффект РЭБ (сдвиг всего контекста)
+    drawEWInterference(dpr);
+
+    // Глитч при захвате
     if (glitchActive > 0) {
-        ctx.save();
         ctx.translate((Math.random()-0.5)*15, (Math.random()-0.5)*15);
         glitchActive--;
     }
@@ -177,7 +203,15 @@ function draw() {
         ctx.globalAlpha = 1;
     }
 
-    if (glitchActive > 0) ctx.restore();
+    ctx.restore();
+
+    // Шум РЭБ на фоне (случайные точки)
+    if (ewIntensity > 5) {
+        for(let i=0; i<10; i++) {
+            ctx.fillStyle = "white";
+            ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, dpr, dpr);
+        }
+    }
 
     requestAnimationFrame(draw);
 }
@@ -186,7 +220,6 @@ function drawReticle(cx, cy, dpr, lf) {
     ctx.save();
     ctx.translate(cx, cy);
     
-    // Вращение кольца при LOCK
     if (lf > 0.2) {
         ctx.save();
         ctx.rotate(pulseTime * 2);
@@ -198,7 +231,6 @@ function drawReticle(cx, cy, dpr, lf) {
         ctx.restore();
     }
 
-    // Центр
     ctx.lineWidth = 2 * dpr;
     const c = 6 * dpr;
     ctx.beginPath();
@@ -206,7 +238,6 @@ function drawReticle(cx, cy, dpr, lf) {
     ctx.moveTo(0, -c); ctx.lineTo(0, c);
     ctx.stroke();
 
-    // Углы (сжимаются при наведении)
     const size = (30 - (10 * lf)) * dpr; 
     const depth = (6 + (14 * lf)) * dpr; 
     
@@ -221,7 +252,6 @@ function drawReticle(cx, cy, dpr, lf) {
         ctx.restore();
     }
 
-    // Боковые скобки
     ctx.lineWidth = 3 * dpr;
     const arcGap = 0.2 * Math.PI;
     ctx.beginPath();
@@ -242,11 +272,15 @@ function drawDataBlock(cx, cy, dpr) {
     infoLines.forEach((line, i) => {
         let len = Math.floor(textTick - (i * 3));
         if (len > 0) {
-            ctx.fillText("» " + line.substring(0, len), cx + 110 * dpr, cy - 40 * dpr + (i * fontSize * 1.5));
+            // Добавляем "шумовые" символы в текст при сильном РЭБ
+            let displayLine = line.substring(0, len);
+            if (ewIntensity > 8 && Math.random() > 0.7) {
+                displayLine = displayLine.replace(/[A-Z]/g, () => String.fromCharCode(33 + Math.random() * 20));
+            }
+            ctx.fillText("» " + displayLine, cx + 110 * dpr, cy - 40 * dpr + (i * fontSize * 1.5));
         }
     });
 
-    // Курсор помехи
     if (Math.random() > 0.8) {
         ctx.fillRect(cx + 110 * dpr, cy + 40 * dpr, 40 * dpr * Math.random(), 2 * dpr);
     }
