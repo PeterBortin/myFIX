@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD TACTICAL v12.0 // FULL_SYNC</title>
+    <title>HUD TACTICAL v13.0 // NEURAL_OP</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         #container { position: relative; width: 100vw; height: 100vh; }
-        video { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.4) contrast(1.3) saturate(0); }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.4) contrast(1.4) saturate(0); }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
         #terminal {
-            position: absolute; top: 20px; left: 20px; width: 380px; height: 350px;
+            position: absolute; top: 20px; left: 20px; width: 380px; height: 180px;
             background: none; font-size: 11px; padding: 5px; overflow: hidden;
-            z-index: 15; line-height: 1.6; text-transform: uppercase;
+            z-index: 15; line-height: 2.0; text-transform: uppercase;
         }
-        .log-entry { margin-bottom: 8px; letter-spacing: 1px; border-left: 2px solid; padding-left: 8px; }
+        .log-entry { margin-bottom: 2px; letter-spacing: 1px; border-left: 3px solid; padding-left: 10px; }
 
         #startBtn {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -28,7 +28,7 @@
 <body>
 
 <div id="container">
-    <button id="startBtn">ENGAGE NEURAL_LINK</button>
+    <button id="startBtn">INITIALIZE HUD v13</button>
     <div id="terminal"></div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="hudCanvas"></canvas>
@@ -54,32 +54,38 @@ let textTick = 0;
 let infoLines = [];
 let glitchActive = 0;
 let ewIntensity = 0;
-let ewTimer = 0;
 
 const RED_TARGETS = ['person', 'car', 'truck', 'bus', 'motorcycle'];
+const GLITCH_CHARS = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+
+function glitchText(text) {
+    return text.split('').map(char => 
+        (Math.random() > 0.92) ? GLITCH_CHARS[Math.floor(Math.random()*GLITCH_CHARS.length)] : char
+    ).join('');
+}
 
 function logToTerminal(msg) {
     const entry = document.createElement('div');
     entry.className = 'log-entry';
-    entry.innerHTML = `[SYS_LOG] > ${msg}`;
+    entry.innerHTML = `[OP_DATA] > ${msg}`;
     terminal.appendChild(entry);
-    if (terminal.children.length > 12) terminal.removeChild(terminal.firstChild);
-    if (lockFactor > 0.5) glitchActive = 8;
+    if (terminal.children.length > 6) terminal.removeChild(terminal.firstChild);
+    glitchActive = 12;
 }
 
 startBtn.onclick = async () => {
     startBtn.style.display = 'none';
-    logToTerminal("INIT_SEQUENCER_V12...");
+    logToTerminal("SYTEM_START...");
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
         model = await cocoSsd.load();
-        logToTerminal("COCO_SSD_V2: OPERATIONAL");
+        logToTerminal("MODEL_SYNC_OK");
         resize();
         detectFrame();
         draw();
     } catch (err) {
-        logToTerminal("CRITICAL_LINK_ERROR");
+        logToTerminal("HARDWARE_FAILURE");
     }
 };
 
@@ -103,28 +109,25 @@ async function detectFrame() {
             
             let dist = Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y);
             let wasLocked = isLocked;
-            isLocked = dist < 130 && RED_TARGETS.includes(p.class.toLowerCase());
+            isLocked = dist < 140 && RED_TARGETS.includes(p.class.toLowerCase());
 
             if (isLocked && !wasLocked) {
                 textTick = 0;
-                const id = "0x" + Math.random().toString(16).slice(2,8).toUpperCase();
-                const prob = Math.round(p.score * 100);
                 infoLines = [
                     `TARGET: ${p.class.toUpperCase()}`,
-                    `UID: ${id}`,
-                    `PROB: ${prob}%`,
-                    `DIST: CALCULATING...`,
-                    `STATE: STABLE_LOCK`
+                    `SIG_ID: ${Math.random().toString(16).slice(2,6).toUpperCase()}`,
+                    `CONFID: ${Math.round(p.score * 100)}%`,
+                    `SCAN_M: DYNAMIC`,
+                    `STATUS: LOCKED`
                 ];
-                logToTerminal(`LOCK: ${p.class.toUpperCase()} | ID:${id} | CONF:${prob}%`);
+                logToTerminal(`OBJECT_LOCKED: ${p.class.toUpperCase()}`);
             }
         } else {
-            if (isLocked) logToTerminal("SIGNAL_LOST: SEARCHING...");
             targetPos.active = false;
             isLocked = false;
         }
     }
-    setTimeout(detectFrame, 60);
+    setTimeout(detectFrame, 50);
 }
 
 function draw() {
@@ -133,16 +136,13 @@ function draw() {
 
     const destX = targetPos.active ? targetPos.x : window.innerWidth / 2;
     const destY = targetPos.active ? targetPos.y : window.innerHeight / 2;
-    currentPos.x += (destX - currentPos.x) * 0.15;
-    currentPos.y += (destY - currentPos.y) * 0.15;
+    currentPos.x += (destX - currentPos.x) * 0.18;
+    currentPos.y += (destY - currentPos.y) * 0.18;
 
-    if (isLocked) {
-        if (lockFactor < 1) lockFactor += 0.12;
-    } else {
-        if (lockFactor > 0) lockFactor -= 0.08;
-    }
+    if (isLocked) { lockFactor = Math.min(1, lockFactor + 0.15); } 
+    else { lockFactor = Math.max(0, lockFactor - 0.1); }
 
-    pulseTime += 0.1;
+    pulseTime += 0.12;
     const cx = currentPos.x * dpr;
     const cy = currentPos.y * dpr;
     
@@ -153,30 +153,20 @@ function draw() {
 
     ctx.save();
     
-    // Эффект РЭБ
-    ewTimer++;
-    if (ewTimer % 180 === 0) ewIntensity = 20;
-    if (ewIntensity > 0) {
-        ctx.translate((Math.random()-0.5)*30*dpr*(ewIntensity/20), 0);
-        if (Math.random() > 0.8) {
-            ctx.fillStyle = `rgba(255, 255, 255, 0.15)`;
-            ctx.fillRect(0, Math.random()*canvas.height, canvas.width, 4*dpr);
-        }
+    // РЭБ и Глитч эффекты
+    if (Math.random() > 0.98) ewIntensity = 10;
+    if (ewIntensity > 0 || glitchActive > 0) {
+        ctx.translate((Math.random()-0.5)*15*dpr, (Math.random()-0.5)*5*dpr);
         ewIntensity--;
-    }
-
-    // Глитч
-    if (glitchActive > 0) {
-        ctx.translate((Math.random()-0.5)*20, (Math.random()-0.5)*20);
-        glitchActive--;
+        if(glitchActive > 0) glitchActive--;
     }
 
     ctx.strokeStyle = mainColor;
     ctx.fillStyle = mainColor;
-    ctx.shadowBlur = 12 * lockFactor;
+    ctx.shadowBlur = 8 * lockFactor;
     ctx.shadowColor = mainColor;
 
-    drawAdvancedReticle(cx, cy, dpr, lockFactor);
+    drawComplexReticle(cx, cy, dpr, lockFactor);
 
     if (lockFactor > 0.1) {
         ctx.globalAlpha = lockFactor;
@@ -188,89 +178,79 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-function drawAdvancedReticle(cx, cy, dpr, lf) {
+function drawComplexReticle(cx, cy, dpr, lf) {
     ctx.save();
     ctx.translate(cx, cy);
     
-    // Вращение двух орбит
+    // 1. Внешние динамические точки (вращение)
     ctx.save();
-    ctx.rotate(pulseTime);
-    ctx.lineWidth = 1 * dpr;
-    ctx.setLineDash([20*dpr, 30*dpr]);
-    ctx.beginPath();
-    ctx.arc(0, 0, 110 * dpr, 0, Math.PI * 2);
-    ctx.stroke();
-    
-    if (lf > 0.5) {
-        ctx.rotate(-pulseTime * 2.5);
-        ctx.setLineDash([5*dpr, 15*dpr]);
+    ctx.rotate(pulseTime * 0.5);
+    for(let i=0; i<8; i++) {
+        ctx.rotate(Math.PI / 4);
         ctx.beginPath();
-        ctx.arc(0, 0, 125 * dpr, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.arc(130 * dpr, 0, 2 * dpr, 0, Math.PI*2);
+        ctx.fill();
     }
     ctx.restore();
 
-    // Сканирующая полоса (анимация)
-    if (lf > 0.3) {
-        const scanY = (Math.sin(pulseTime * 2) * 100) * dpr;
-        ctx.lineWidth = 1 * dpr;
-        ctx.beginPath();
-        ctx.moveTo(-70 * dpr, scanY);
-        ctx.lineTo(70 * dpr, scanY);
-        ctx.globalAlpha = 0.4;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-    }
-
-    // Центральное перекрестие
+    // 2. Рамки-уголки (с пульсацией)
+    const s = (40 - (15 * lf)) * dpr;
+    const l = (12 + (10 * lf)) * dpr;
     ctx.lineWidth = 2 * dpr;
-    const c = 8 * dpr;
-    ctx.beginPath();
-    ctx.moveTo(-c, 0); ctx.lineTo(c, 0);
-    ctx.moveTo(0, -c); ctx.lineTo(0, c);
-    ctx.stroke();
-
-    // Динамические углы
-    const size = (35 - (15 * lf)) * dpr; 
-    const depth = (10 + (20 * lf)) * dpr; 
-    for (let i = 0; i < 4; i++) {
+    for(let i=0; i<4; i++) {
         ctx.save();
-        ctx.rotate(i * Math.PI / 2);
+        ctx.rotate(i * Math.PI/2);
         ctx.beginPath();
-        ctx.moveTo(size, -size + depth);
-        ctx.lineTo(size, -size);
-        ctx.lineTo(size - depth, -size);
+        ctx.moveTo(s, -s+l); ctx.lineTo(s, -s); ctx.lineTo(s-l, -s);
         ctx.stroke();
         ctx.restore();
     }
 
-    // Боковые шкалы
-    const barWidth = 4 * dpr;
-    const barHeight = 60 * dpr;
-    const barOffset = (90 + (10 * lf)) * dpr;
-    ctx.fillRect(-barOffset, -barHeight/2, barWidth, barHeight * lf);
-    ctx.fillRect(barOffset - barWidth, -barHeight/2, barWidth, barHeight * lf);
+    // 3. Плавающие горизонтальные/вертикальные рамки
+    const offset = (60 + Math.sin(pulseTime * 3) * 5) * dpr;
+    ctx.lineWidth = 1 * dpr;
+    // Горизонтальные
+    ctx.beginPath(); ctx.moveTo(-20*dpr, -offset); ctx.lineTo(20*dpr, -offset); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-20*dpr, offset); ctx.lineTo(20*dpr, offset); ctx.stroke();
+    // Вертикальные
+    ctx.beginPath(); ctx.moveTo(-offset, -20*dpr); ctx.lineTo(-offset, 20*dpr); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(offset, -20*dpr); ctx.lineTo(offset, 20*dpr); ctx.stroke();
+
+    // 4. Орбиты
+    ctx.setLineDash([10*dpr, 20*dpr]);
+    ctx.beginPath(); ctx.arc(0, 0, 100*dpr, 0, Math.PI*2); ctx.stroke();
+    if(lf > 0.7) {
+        ctx.setLineDash([2*dpr, 10*dpr]);
+        ctx.save(); ctx.rotate(-pulseTime);
+        ctx.beginPath(); ctx.arc(0, 0, 115*dpr, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
+    }
+
+    // 5. Центр
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(0, 0, 4*dpr, 0, Math.PI*2); ctx.fill();
 
     ctx.restore();
 }
 
 function drawDataBlock(cx, cy, dpr) {
-    textTick += 0.5;
-    const fontSize = 14 * dpr;
+    textTick += 0.4;
+    const fontSize = 13 * dpr;
     ctx.font = `bold ${fontSize}px 'Courier New'`;
     
     infoLines.forEach((line, i) => {
         let len = Math.floor(textTick - (i * 3));
         if (len > 0) {
             let txt = "» " + line.substring(0, len);
-            // Микро-глитч для текста
-            let offX = (ewIntensity > 10) ? (Math.random()-0.5)*10 : 0;
-            ctx.fillText(txt, cx + 140 * dpr + offX, cy - 45 * dpr + (i * fontSize * 2));
+            // Анимация глитч-символов
+            if (Math.random() > 0.9) txt = glitchText(txt);
+            ctx.fillText(txt, cx + 150 * dpr, cy - 50 * dpr + (i * fontSize * 2.2));
         }
     });
 
-    // Декоративный прогресс-бар внизу текста
-    ctx.fillRect(cx + 140 * dpr, cy + 85 * dpr, 100 * dpr * Math.min(1, textTick/30), 2 * dpr);
+    // Динамический квадрат-маркер возле текста
+    ctx.strokeRect(cx + 150 * dpr, cy + 90 * dpr, 80 * dpr, 15 * dpr);
+    ctx.fillRect(cx + 150 * dpr, cy + 90 * dpr, (Math.sin(pulseTime*2)+1)*40 * dpr, 15 * dpr);
 }
 
 window.onresize = resize;
