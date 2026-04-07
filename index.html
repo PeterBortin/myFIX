@@ -3,32 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD TACTICAL AI v6.0 // SMOOTH_TRACK</title>
+    <title>HUD TACTICAL v7.0 // DUAL_MODE</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         #container { position: relative; width: 100vw; height: 100vh; }
-        video { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.6) contrast(1.2) saturate(0.8); }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.5) contrast(1.3) saturate(0.7); }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
         #overlay {
-            position: absolute; top: 20px; left: 20px; color: #0f0; 
-            text-shadow: 0 0 10px #0f0; font-size: 11px; z-index: 10; letter-spacing: 2px;
+            position: absolute; top: 25px; left: 25px; color: #0f0; 
+            text-shadow: 0 0 10px #0f0; font-size: 10px; z-index: 10; letter-spacing: 2px;
         }
 
         #startBtn {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 15px 40px; background: none; border: 1px solid #0f0; color: #0f0;
-            font-family: inherit; cursor: pointer; z-index: 20; box-shadow: 0 0 15px rgba(0,255,0,0.4);
-            text-transform: uppercase; letter-spacing: 3px; transition: 0.3s;
+            padding: 18px 45px; background: none; border: 1px solid #0f0; color: #0f0;
+            font-family: inherit; cursor: pointer; z-index: 20; box-shadow: 0 0 20px rgba(0,255,0,0.3);
+            text-transform: uppercase; letter-spacing: 4px; transition: 0.4s;
         }
-        #startBtn:hover { background: rgba(0,255,0,0.1); }
+        #startBtn:hover { background: rgba(0,255,0,0.1); box-shadow: 0 0 30px rgba(0,255,0,0.5); }
     </style>
 </head>
 <body>
 
 <div id="container">
-    <button id="startBtn">Initialize CORE_V6</button>
-    <div id="overlay">NEURAL_LINK [STABILIZING] // OS_STATUS: STANDBY</div>
+    <button id="startBtn">SYNC_NEURAL_LINK</button>
+    <div id="overlay">CORE_V7 // MODE: DUAL_PHASE // STATUS: READY</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="hudCanvas"></canvas>
 </div>
@@ -47,7 +47,7 @@ let model;
 let targetPos = { x: window.innerWidth/2, y: window.innerHeight/2, active: false };
 let currentPos = { x: window.innerWidth/2, y: window.innerHeight/2 };
 let isLocked = false;
-let lockFactor = 0; // Плавный переход между 0 (standby) и 1 (locked)
+let lockFactor = 0; // 0 = White/Search, 1 = Red/Lock
 let pulseTime = 0;
 let textTick = 0;
 let infoLines = [];
@@ -55,17 +55,17 @@ let allPredictions = [];
 
 startBtn.onclick = async () => {
     startBtn.style.display = 'none';
-    overlay.innerHTML = "OS: RECOGNITION_CORE_LOADED [SCANNING]";
+    overlay.innerHTML = "SYSTEM: INITIALIZING_NEURAL_NET...";
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
         model = await cocoSsd.load();
-        overlay.innerHTML = "OS: ACTIVE // LINK: STABLE // SCANNING_MODE";
+        overlay.innerHTML = "OS: ONLINE // SCAN_ACTIVE // 60FPS_STABLE";
         resize();
         detectFrame();
         draw();
     } catch (err) {
-        overlay.innerHTML = "FATAL_ERROR: SENSOR_ACCESS_DENIED";
+        overlay.innerHTML = "ERROR: SENSOR_NOT_FOUND";
     }
 };
 
@@ -80,43 +80,38 @@ async function detectFrame() {
         allPredictions = predictions;
 
         if (predictions.length > 0) {
-            // Берем самый уверенный объект
             const p = predictions[0];
             const [x, y, w, h] = p.bbox;
             const sX = window.innerWidth / video.videoWidth;
             const sY = window.innerHeight / video.videoHeight;
 
-            // Целевая позиция
             targetPos.x = (x + w/2) * sX;
             targetPos.y = (y + h/2) * sY;
             targetPos.active = true;
             
+            // Радиус захвата: если прицел близко к цели — включаем LOCK
             let dist = Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y);
             let wasLocked = isLocked;
-            isLocked = dist < 120; // Увеличен радиус для мягкости захвата
+            isLocked = dist < 100;
 
             if (isLocked && !wasLocked) {
                 textTick = 0;
-                generateInfoText(p, targetPos);
+                generateInfo(p);
             }
         } else {
-            // Если объектов нет, медленно возвращаем "цель" в центр, чтобы не было прыжка
             targetPos.active = false;
+            isLocked = false;
         }
     }
     setTimeout(detectFrame, 50);
 }
 
-function generateInfoText(pred, pos) {
-    const cls = pred.class.toUpperCase();
-    const conf = Math.round(pred.score * 100);
-    const time = new Date().toLocaleTimeString('ru-RU', { hour12: false });
+function generateInfo(p) {
     infoLines = [
-        `ID: ${cls}_${conf}`,
-        `MODE: LOCK_STABLE`,
-        `DIST: ANALYZING...`,
-        `COORD: ${Math.floor(pos.x)}:${Math.floor(pos.y)}`,
-        `TS: ${time}`
+        `TARGET: ${p.class.toUpperCase()}`,
+        `CONFIDENCE: ${Math.round(p.score * 100)}%`,
+        `STATUS: ENGAGED`,
+        `SIG: 0x${Math.floor(Math.random()*16777215).toString(16).toUpperCase()}`
     ];
 }
 
@@ -124,160 +119,137 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const dpr = window.devicePixelRatio;
 
-    // ПЛАВНОЕ СЛЕДОВАНИЕ (LERP)
-    // Если цели нет, плавно идем к центру. Если есть — к цели.
+    // Сглаживание движения
     const destX = targetPos.active ? targetPos.x : window.innerWidth / 2;
     const destY = targetPos.active ? targetPos.y : window.innerHeight / 2;
-    
-    // Коэффициент 0.1 дает очень мягкое "кинематографичное" движение
-    currentPos.x += (destX - currentPos.x) * 0.12;
-    currentPos.y += (destY - currentPos.y) * 0.12;
+    currentPos.x += (destX - currentPos.x) * 0.15;
+    currentPos.y += (destY - currentPos.y) * 0.15;
 
-    // Плавное изменение состояния Lock (от 0 до 1)
+    // Плавный переход LockFactor
     if (isLocked && targetPos.active) {
-        if (lockFactor < 1) lockFactor += 0.05;
+        if (lockFactor < 1) lockFactor += 0.08;
     } else {
-        if (lockFactor > 0) lockFactor -= 0.05;
+        if (lockFactor > 0) lockFactor -= 0.08;
     }
 
-    let shakeX = (Math.random() - 0.5) * (5 * lockFactor);
-    let shakeY = (Math.random() - 0.5) * (3 * lockFactor);
-
-    const cx = (currentPos.x + shakeX) * dpr;
-    const cy = (currentPos.y + shakeY) * dpr;
+    // Параметры отрисовки
+    pulseTime += 0.1;
+    const cx = currentPos.x * dpr;
+    const cy = currentPos.y * dpr;
+    const scale = 1 + (Math.sin(pulseTime) * 0.03 * lockFactor);
     
-    pulseTime += 0.08;
-    const pulseScale = 1 + (Math.sin(pulseTime * 2) * 0.03 * lockFactor);
-    
-    // Плавный переход цвета между белым и красным
-    const r = Math.floor(255);
-    const g = Math.floor(255 - (240 * lockFactor));
-    const b = Math.floor(255 - (255 * lockFactor));
-    const color = `rgb(${r},${g},${b})`;
+    // ЦВЕТОВАЯ ИНТЕРПОЛЯЦИЯ (Белый -> Красный)
+    const red = 255;
+    const green = Math.floor(255 * (1 - lockFactor));
+    const blue = Math.floor(255 * (1 - lockFactor));
+    const mainColor = `rgb(${red}, ${green}, ${blue})`;
 
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.shadowBlur = 5 + (15 * lockFactor);
-    ctx.shadowColor = color;
+    ctx.strokeStyle = mainColor;
+    ctx.fillStyle = mainColor;
+    ctx.shadowBlur = 5 + (20 * lockFactor);
+    ctx.shadowColor = mainColor;
 
-    // 1. Подсветка всех объектов (всегда мягкая)
-    drawAllObjects(dpr);
+    // 1. Рисуем все найденные объекты (фоново)
+    drawObjectMarkers(dpr);
 
-    // 2. Боковые шкалы
-    drawSideScales(cx, cy, dpr, lockFactor);
+    // 2. Основной прицел
+    drawReticle(cx, cy, dpr, scale, lockFactor);
 
-    // 3. Улучшенный прицел
-    drawAdvancedReticle(cx, cy, dpr, pulseScale, lockFactor);
-
-    // 4. Текст (только если lockFactor > 0.5)
-    if (lockFactor > 0.1) {
+    // 3. Текстовый блок
+    if (lockFactor > 0.2) {
         ctx.globalAlpha = lockFactor;
-        drawInfoText(cx, cy, dpr);
+        drawDataBlock(cx, cy, dpr);
         ctx.globalAlpha = 1;
     }
 
     requestAnimationFrame(draw);
 }
 
-function drawAllObjects(dpr) {
+function drawObjectMarkers(dpr) {
     ctx.lineWidth = 1 * dpr;
     const sW = window.innerWidth;
     const sH = window.innerHeight;
     const vW = video.videoWidth || 1;
     const vH = video.videoHeight || 1;
 
-    allPredictions.forEach((p, index) => {
+    allPredictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
         const scaleX = sW / vW;
         const scaleY = sH / vH;
-        
-        ctx.strokeStyle = "rgba(0, 255, 65, 0.15)";
+        ctx.strokeStyle = "rgba(0, 255, 100, 0.2)";
         ctx.strokeRect(x * scaleX * dpr, y * scaleY * dpr, w * scaleX * dpr, h * scaleY * dpr);
     });
 }
 
-function drawSideScales(cx, cy, dpr, lf) {
-    ctx.lineWidth = 1 * dpr;
-    const xOff = (135 + (20 * lf)) * dpr;
-    const ySize = 100 * dpr;
-    
-    ctx.beginPath();
-    ctx.moveTo(cx - xOff, cy - ySize); ctx.lineTo(cx - xOff, cy + ySize);
-    ctx.moveTo(cx + xOff, cy - ySize); ctx.lineTo(cx + xOff, cy + ySize);
-    ctx.stroke();
-
-    for (let i = -3; i <= 3; i++) {
-        let yOffset = cy + (i * 30 * dpr);
-        let len = (i === 0) ? 20 : 10;
-        ctx.beginPath();
-        ctx.moveTo(cx - xOff, yOffset); ctx.lineTo(cx - xOff + len * dpr, yOffset);
-        ctx.moveTo(cx + xOff, yOffset); ctx.lineTo(cx + xOff - len * dpr, yOffset);
-        ctx.stroke();
-    }
-}
-
-function drawAdvancedReticle(cx, cy, dpr, scale, lf) {
+function drawReticle(cx, cy, dpr, scale, lf) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
 
-    // Вращающиеся элементы при Lock
-    if (lf > 0.1) {
+    // Вращающиеся "радарные" дуги при захвате
+    if (lf > 0) {
         ctx.save();
-        ctx.rotate(pulseTime);
+        ctx.rotate(pulseTime * (0.5 + lf));
         ctx.lineWidth = 1 * dpr;
-        ctx.setLineDash([20, 100]);
+        ctx.setLineDash([30 * dpr, 60 * dpr]);
         ctx.beginPath();
         ctx.arc(0, 0, 110 * dpr, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
     }
 
-    // Внутренний крест
+    // Внутренний индикатор (Крест)
     ctx.lineWidth = 2 * dpr;
-    const cs = 8 * dpr;
+    const crossSize = 10 * dpr;
     ctx.beginPath();
-    ctx.moveTo(-cs, 0); ctx.lineTo(cs, 0);
-    ctx.moveTo(0, -cs); ctx.lineTo(0, cs);
+    ctx.moveTo(-crossSize, 0); ctx.lineTo(crossSize, 0);
+    ctx.moveTo(0, -crossSize); ctx.lineTo(0, crossSize);
     ctx.stroke();
 
-    // Основные уголки (меняют форму при Lock)
-    const s = 30 * dpr;
-    const g = 10 * dpr + (15 * lf); // Уголки "сжимаются" к центру при захвате
+    // Уголки прицела
+    const size = (35 - (10 * lf)) * dpr; // Сжимаются при LOCK
+    const gap = (10 + (10 * lf)) * dpr; // Вытягиваются внутрь
     
     for (let i = 0; i < 4; i++) {
-        ctx.rotate(Math.PI / 2);
+        ctx.save();
+        ctx.rotate(i * Math.PI / 2);
         ctx.beginPath();
-        ctx.moveTo(s, -s + g);
-        ctx.lineTo(s, -s);
-        ctx.lineTo(s - g, -s);
+        ctx.moveTo(size, -size + gap);
+        ctx.lineTo(size, -size);
+        ctx.lineTo(size - gap, -size);
         ctx.stroke();
+        ctx.restore();
     }
 
-    // Боковые дуги
-    ctx.setLineDash([15, 15]);
+    // Боковые сегменты (как на картинке)
+    ctx.lineWidth = 4 * dpr;
     ctx.beginPath();
-    ctx.arc(0, 0, 90 * dpr, -0.2 * Math.PI, 0.2 * Math.PI);
+    ctx.arc(0, 0, 85 * dpr, 0.8 * Math.PI, 1.2 * Math.PI);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(0, 0, 90 * dpr, 0.8 * Math.PI, 1.2 * Math.PI);
+    ctx.arc(0, 0, 85 * dpr, -0.2 * Math.PI, 0.2 * Math.PI);
     ctx.stroke();
-    
+
     ctx.restore();
 }
 
-function drawInfoText(cx, cy, dpr) {
+function drawDataBlock(cx, cy, dpr) {
     textTick += 0.4;
-    const fontSize = 12 * dpr;
+    const fontSize = 13 * dpr;
     ctx.font = `bold ${fontSize}px 'Courier New'`;
     ctx.textAlign = 'left';
 
-    infoLines.forEach((line, index) => {
-        let count = Math.floor(textTick - (index * 4));
+    infoLines.forEach((line, i) => {
+        let count = Math.floor(textTick - (i * 5));
         if (count > 0) {
-            ctx.fillText("> " + line.substring(0, count), cx + 135 * dpr, cy - 40 * dpr + (index * fontSize * 1.6));
+            ctx.fillText("> " + line.substring(0, count), cx + 130 * dpr, cy - 30 * dpr + (i * fontSize * 1.6));
         }
     });
+
+    // Курсор
+    if (Math.floor(pulseTime * 4) % 2 === 0) {
+        ctx.fillRect(cx + 130 * dpr, cy + 45 * dpr, 10 * dpr, 2 * dpr);
+    }
 }
 
 window.onresize = resize;
