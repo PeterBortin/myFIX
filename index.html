@@ -38,7 +38,6 @@
 
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-    /* ── SCANLINES overlay ── */
     #scanlines {
         position: absolute; inset: 0; pointer-events: none; z-index: 5;
         background: repeating-linear-gradient(
@@ -50,7 +49,6 @@
     }
     @keyframes scanScroll { from { background-position: 0 0; } to { background-position: 0 100px; } }
 
-    /* ── VIGNETTE ── */
     #vignette {
         position: absolute; inset: 0; pointer-events: none; z-index: 4;
         background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
@@ -98,11 +96,8 @@
     .log-entry.threat { color: var(--red); }
     .log-entry.info { color: rgba(255,255,255,0.6); }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-
     .log-ts { color: rgba(255,255,255,0.2); flex-shrink: 0; }
     .log-prefix { color: rgba(255,255,255,0.25); }
-
-    /* Cursor blink */
     #cursor {
         display: inline-block; width: 7px; height: 12px;
         background: rgba(255,255,255,0.5);
@@ -132,7 +127,6 @@
     }
     .sp-val.active { color: var(--red); text-shadow: 0 0 8px var(--red); }
 
-    /* ── BAR INDICATORS ── */
     .bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.1); position: relative; }
     .bar-fill {
         height: 100%; background: rgba(255,255,255,0.5);
@@ -173,7 +167,7 @@
     .comp-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1px; padding: 0 3px; font-family: var(--sans); font-weight: 700; }
     #compassN { color: var(--red) !important; }
 
-    /* ── THREAT BOX ── */
+    /* ── THREAT BOX (right center) ── */
     #threatBox {
         position: absolute; top: 50%; right: 15px;
         transform: translateY(-50%);
@@ -198,13 +192,199 @@
         z-index: 15; text-transform: uppercase;
     }
     #ewAlert.show { opacity: 1; }
+
+    /* ── PORTRAIT CAPTURE PANEL (top-left) ── */
+    #portraitPanel {
+        position: absolute;
+        top: 50px; left: 15px;
+        width: 220px;
+        z-index: 16;
+        opacity: 0;
+        transition: opacity 0.5s;
+        pointer-events: none;
+    }
+    #portraitPanel.show { opacity: 1; }
+
+    .portrait-header {
+        font-family: var(--sans); font-size: 9px; font-weight: 700;
+        letter-spacing: 3px; color: var(--red);
+        border-bottom: 1px solid rgba(255,32,32,0.4);
+        padding-bottom: 5px; margin-bottom: 8px;
+        text-transform: uppercase;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .portrait-blink {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--red);
+        animation: blink 0.6s steps(1) infinite;
+    }
+
+    #portraitFrame {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background: #000;
+        border: 1px solid rgba(255,32,32,0.3);
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    #portraitCanvas {
+        width: 100%; height: 100%;
+        display: block;
+        image-rendering: pixelated;
+        filter: brightness(1.1) contrast(1.2) saturate(0.15) hue-rotate(180deg);
+    }
+
+    /* Corner brackets on portrait frame */
+    #portraitFrame::before,
+    #portraitFrame::after {
+        content: '';
+        position: absolute;
+        width: 14px; height: 14px;
+        border-color: var(--red);
+        border-style: solid;
+        z-index: 2;
+    }
+    #portraitFrame::before {
+        top: 4px; left: 4px;
+        border-width: 2px 0 0 2px;
+    }
+    #portraitFrame::after {
+        bottom: 4px; right: 4px;
+        border-width: 0 2px 2px 0;
+    }
+
+    /* Extra corners via overlay */
+    #portraitCorners {
+        position: absolute; inset: 0; pointer-events: none; z-index: 3;
+    }
+    #portraitCorners::before,
+    #portraitCorners::after {
+        content: '';
+        position: absolute;
+        width: 14px; height: 14px;
+        border-color: var(--red);
+        border-style: solid;
+    }
+    #portraitCorners::before {
+        top: 4px; right: 4px;
+        border-width: 2px 2px 0 0;
+    }
+    #portraitCorners::after {
+        bottom: 4px; left: 4px;
+        border-width: 0 0 2px 2px;
+    }
+
+    /* Center crosshair on portrait */
+    #portraitCross {
+        position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    }
+    #portraitCross::before {
+        content: '';
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 16px; height: 16px;
+        border: 1px solid rgba(255,32,32,0.5);
+        border-radius: 50%;
+    }
+    #portraitCross::after {
+        content: '';
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 4px; height: 4px;
+        background: rgba(255,32,32,0.8);
+        border-radius: 50%;
+    }
+
+    /* Scanline overlay on portrait */
+    #portraitScan {
+        position: absolute; inset: 0; z-index: 5; pointer-events: none;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent, transparent 2px,
+            rgba(0,0,0,0.25) 2px, rgba(0,0,0,0.25) 3px
+        );
+    }
+
+    /* Timestamp stamp on portrait */
+    #portraitStamp {
+        position: absolute; bottom: 6px; left: 6px; right: 6px;
+        z-index: 6; pointer-events: none;
+        font-family: var(--mono); font-size: 8px;
+        color: rgba(255,32,32,0.7);
+        letter-spacing: 1px;
+        display: flex; justify-content: space-between;
+    }
+
+    /* Portrait meta data rows */
+    .portrait-meta {
+        display: flex; flex-direction: column; gap: 3px;
+    }
+    .pm-row {
+        display: flex; justify-content: space-between;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 3px;
+        font-size: 9px;
+    }
+    .pm-key {
+        font-family: var(--sans); font-weight: 700;
+        letter-spacing: 2px; color: rgba(255,255,255,0.25);
+        text-transform: uppercase;
+    }
+    .pm-val {
+        font-family: var(--mono); color: rgba(255,255,255,0.6);
+        letter-spacing: 1px;
+    }
+    .pm-val.red { color: var(--red); text-shadow: 0 0 6px var(--red); }
+
+    /* "CAPTURED" flash label */
+    #capturedFlash {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: var(--sans); font-size: 11px; font-weight: 700;
+        letter-spacing: 4px; color: var(--red);
+        text-transform: uppercase;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 7;
+        transition: opacity 0.1s;
+    }
+    #capturedFlash.flash {
+        animation: captureFlash 0.8s ease forwards;
+    }
+    @keyframes captureFlash {
+        0%   { opacity: 1; }
+        60%  { opacity: 0.8; }
+        100% { opacity: 0; }
+    }
+
+    /* White flash overlay on full screen capture */
+    #flashOverlay {
+        position: absolute; inset: 0; z-index: 50;
+        background: rgba(255,255,255,0);
+        pointer-events: none;
+        transition: background 0.05s;
+    }
+    #flashOverlay.flash {
+        animation: screenFlash 0.3s ease forwards;
+    }
+    @keyframes screenFlash {
+        0%   { background: rgba(255,255,255,0.25); }
+        100% { background: rgba(255,255,255,0); }
+    }
 </style>
+```
 
 </head>
 <body>
 <div id="container">
 
 <!-- START SCREEN -->
+
 <button id="startBtn">
     <div class="btn-inner">
         <div class="btn-ring">
@@ -227,11 +407,17 @@
     </div>
 </button>
 
+<!-- FLASH OVERLAY -->
+
+<div id="flashOverlay"></div>
+
 <!-- OVERLAYS -->
+
 <div id="vignette"></div>
 <div id="scanlines"></div>
 
 <!-- TOP BAR -->
+
 <div id="topbar">
     <div class="tb-left">
         <span class="tb-label"></span>
@@ -250,6 +436,7 @@
 </div>
 
 <!-- COMPASS -->
+
 <div id="compass" style="display:none">
     <div class="comp-tick"></div>
     <div class="comp-tick major"></div><span class="comp-label" id="compassN">N</span>
@@ -270,7 +457,29 @@
     <div class="comp-tick"></div>
 </div>
 
+<!-- ── PORTRAIT CAPTURE PANEL (top-left) ── -->
+
+<div id="portraitPanel">
+    <div class="portrait-header">
+        <span>// SUBJ CAPTURED</span>
+        <div class="portrait-blink"></div>
+    </div>
+    <div id="portraitFrame">
+        <canvas id="portraitCanvas"></canvas>
+        <div id="portraitCorners"></div>
+        <div id="portraitCross"></div>
+        <div id="portraitScan"></div>
+        <div id="portraitStamp">
+            <span id="pStampTime">--:--:--</span>
+            <span id="pStampId">ID:------</span>
+        </div>
+        <div id="capturedFlash">CAPTURED</div>
+    </div>
+    <div class="portrait-meta" id="portraitMeta"></div>
+</div>
+
 <!-- STATUS PANEL -->
+
 <div id="statusPanel" style="display:none">
     <div class="sp-row">
         <span class="sp-key">network</span>
@@ -296,30 +505,38 @@
         <span class="sp-key">ew</span>
         <div class="bar-wrap"><div class="bar-fill" id="ewBar" style="width:0%"></div></div>
     </div>
+    <div class="sp-row">
+        <span class="sp-key">captures</span>
+        <span class="sp-val" id="captureStat">0</span>
+    </div>
 </div>
 
 <!-- EW ALERT -->
+
 <div id="ewAlert">⚠ EW INTERFERENCE</div>
 
 <!-- THREAT INFO BOX -->
+
 <div id="threatBox">
     <div class="tb-header">// target acquired</div>
     <div id="threatLines"></div>
 </div>
 
 <!-- TERMINAL -->
+
 <div id="terminal"><span id="cursor"></span></div>
 
 <!-- BOTTOM BAR -->
+
 <div id="botbar" style="display:none">
     <span class="coords" id="coordsL">LAT 00°00'00"N  LON 000°00'00"E</span>
     <span class="coords" id="coordsR">ALT --m  SPD --kts  HDG --°</span>
 </div>
 
 <!-- VIDEO + CANVAS -->
+
 <video id="video" autoplay playsinline muted></video>
 <canvas id="hudCanvas"></canvas>
-```
 
 </div>
 
@@ -328,10 +545,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
 
 <script>
-/* ─────────────────────────────────────────────────
-   COCO-SSD detects 80 classes. We split them into
-   threat tiers for color-coded HUD response.
-───────────────────────────────────────────────── */
 const THREAT = {
     HIGH:   ['person','car','truck','bus','motorcycle','airplane','boat','train'],
     MEDIUM: ['bicycle','horse','cow','dog','cat','bird','sheep','bear','elephant','zebra','giraffe'],
@@ -359,6 +572,16 @@ const startBtn = document.getElementById('startBtn');
 const terminal = document.getElementById('terminal');
 const cursor   = document.getElementById('cursor');
 
+/* ── Portrait capture DOM ── */
+const portraitPanel  = document.getElementById('portraitPanel');
+const portraitCanvas = document.getElementById('portraitCanvas');
+const portraitCtx    = portraitCanvas.getContext('2d');
+const pStampTime     = document.getElementById('pStampTime');
+const pStampId       = document.getElementById('pStampId');
+const portraitMeta   = document.getElementById('portraitMeta');
+const capturedFlash  = document.getElementById('capturedFlash');
+const flashOverlay   = document.getElementById('flashOverlay');
+
 /* ── State ── */
 let model;
 let allPredictions = [];
@@ -373,10 +596,14 @@ let textTick    = 0;
 let infoLines   = [];
 let glitchActive = 0;
 
+/* ── Portrait capture state ── */
+let captureCount    = 0;
+let lastCapturedClass = null;
+let captureThrottle = 0; // frames since last capture
+
 /* ── EW State ── */
 let ewIntensity = 0;
 let ewTimer     = 0;
-let ewDecay     = 0;
 
 /* ── Terminal ── */
 function ts() {
@@ -400,24 +627,19 @@ async function drainLog() {
     const { msg, cls, res } = logQueue.shift();
     const entry = document.createElement('div');
     entry.className = `log-entry ${cls}`;
-
     const tsSpan = document.createElement('span');
     tsSpan.className = 'log-ts';
     tsSpan.textContent = ts();
-
     const pre = document.createElement('span');
     pre.className = 'log-prefix';
     pre.textContent = '›';
-
     const txt = document.createElement('span');
     entry.appendChild(tsSpan);
     entry.appendChild(pre);
     entry.appendChild(txt);
-
     terminal.insertBefore(entry, cursor);
     while (terminal.querySelectorAll('.log-entry').length > 12)
         terminal.removeChild(terminal.querySelector('.log-entry'));
-
     for (let i = 0; i <= msg.length; i++) {
         txt.textContent = msg.substring(0, i);
         await new Promise(r => setTimeout(r, 18));
@@ -429,7 +651,8 @@ async function drainLog() {
 /* ── Clock ── */
 setInterval(() => {
     const n = new Date();
-    document.getElementById('clockVal').textContent = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
+    document.getElementById('clockVal').textContent =
+        `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
 }, 1000);
 
 /* ── Fake coords drift ── */
@@ -444,6 +667,80 @@ setInterval(() => {
     const hdg = (360 + Math.round(45 + Math.sin(Date.now()/10000)*20)) % 360;
     document.getElementById('coordsR').textContent = `ALT ${180 + Math.round(Math.sin(Date.now()/7000)*5)}m  SPD ${Math.round(12+Math.random()*2)}kts  HDG ${hdg}°`;
 }, 1500);
+
+/* ─────────────────────────────────────────────────
+   PORTRAIT CAPTURE
+   Crops the bounding box from video and renders
+   into the portrait panel with HUD metadata.
+───────────────────────────────────────────────── */
+function capturePortrait(prediction) {
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    const [bx, by, bw, bh] = prediction.bbox;
+
+    // Expand crop by ~15% for context, clamp to video bounds
+    const padX = bw * 0.15;
+    const padY = bh * 0.15;
+    const cropX = Math.max(0, bx - padX);
+    const cropY = Math.max(0, by - padY);
+    const cropW = Math.min(video.videoWidth  - cropX, bw + padX * 2);
+    const cropH = Math.min(video.videoHeight - cropY, bh + padY * 2);
+
+    // Render portrait square (1:1 aspect)
+    const size = 220; // px, matches CSS
+    portraitCanvas.width  = size;
+    portraitCanvas.height = size;
+
+    // Fill black first
+    portraitCtx.fillStyle = '#000';
+    portraitCtx.fillRect(0, 0, size, size);
+
+    // Draw cropped region stretched to square
+    portraitCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, size, size);
+
+    // Timestamp & ID on stamp
+    pStampTime.textContent = ts();
+    const captureId = '0x' + Math.random().toString(16).slice(2, 8).toUpperCase();
+    pStampId.textContent = 'ID:' + captureId;
+
+    // Meta rows
+    const tier = getThreat(prediction.class.toLowerCase());
+    const sectorLetter = String.fromCharCode(65 + Math.floor(Math.random() * 6));
+    const sectorNum    = Math.floor(Math.random() * 9 + 1);
+    const metaData = [
+        { k: 'CLASS',  v: prediction.class.toUpperCase(), red: false },
+        { k: 'THREAT', v: tier,                           red: tier === 'HIGH' },
+        { k: 'CONF',   v: Math.round(prediction.score * 100) + '%', red: false },
+        { k: 'SECTOR', v: `${sectorLetter}${sectorNum}`,  red: false },
+        { k: 'UID',    v: captureId,                       red: false },
+        { k: 'STATUS', v: 'LOCKED',                        red: true },
+    ];
+
+    portraitMeta.innerHTML = '';
+    metaData.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'pm-row';
+        row.innerHTML = `<span class="pm-key">${d.k}</span><span class="pm-val${d.red ? ' red' : ''}">${d.v}</span>`;
+        portraitMeta.appendChild(row);
+    });
+
+    // Show panel
+    portraitPanel.classList.add('show');
+
+    // "CAPTURED" text flash inside portrait
+    capturedFlash.classList.remove('flash');
+    void capturedFlash.offsetWidth; // reflow
+    capturedFlash.classList.add('flash');
+
+    // Full-screen white flash
+    flashOverlay.classList.remove('flash');
+    void flashOverlay.offsetWidth;
+    flashOverlay.classList.add('flash');
+
+    captureCount++;
+    document.getElementById('captureStat').textContent = captureCount;
+    lastCapturedClass = prediction.class;
+}
 
 /* ── START ── */
 startBtn.onclick = async () => {
@@ -472,6 +769,7 @@ startBtn.onclick = async () => {
     document.getElementById('modelStat').textContent = 'COCO-SSD';
     document.getElementById('modeVal').textContent   = 'ACTIVE';
     await typeLog('MODEL ONLINE -- 80 CLASS DETECTION', 'info');
+    await typeLog('PORTRAIT CAPTURE: ARMED', 'threat');
     await typeLog('SCANNING...', 'info');
 
     resize();
@@ -495,6 +793,8 @@ async function detectLoop() {
         } catch { /* ignore */ }
     }
 
+    captureThrottle = Math.max(0, captureThrottle - 1);
+
     if (primaryTarget) {
         const p = primaryTarget;
         const [x, y, w, h] = p.bbox;
@@ -516,7 +816,21 @@ async function detectLoop() {
             document.getElementById('lockStat').className    = 'sp-val active';
             glitchActive = 12;
             typeLog(`LOCK -- ${p.class.toUpperCase()} [${getThreat(p.class.toLowerCase())}]`, 'threat');
+
+            // Capture portrait on new lock (throttled — max 1 per 90 frames)
+            if (captureThrottle === 0) {
+                capturePortrait(p);
+                captureThrottle = 90;
+                typeLog(`PORTRAIT CAPTURED // ${p.class.toUpperCase()}`, 'threat');
+            }
         }
+
+        // Also re-capture if target class changes while panel is shown
+        if (isLocked && captureThrottle === 0 && p.class !== lastCapturedClass) {
+            capturePortrait(p);
+            captureThrottle = 90;
+        }
+
         if (!isLocked && wasLocked) {
             document.getElementById('threatBox').classList.remove('show');
             document.getElementById('lockStat').textContent = '--';
@@ -569,13 +883,11 @@ function draw() {
     const dpr = window.devicePixelRatio;
     const W = canvas.width, H = canvas.height;
 
-    /* Smooth tracking */
     const destX = targetPos.active ? targetPos.x : window.innerWidth/2;
     const destY = targetPos.active ? targetPos.y : window.innerHeight/2;
     currentPos.x += (destX - currentPos.x) * 0.12;
     currentPos.y += (destY - currentPos.y) * 0.12;
 
-    /* Lock factor */
     lockFactor = isLocked
         ? Math.min(1, lockFactor + 0.08)
         : Math.max(0, lockFactor - 0.04);
@@ -583,22 +895,20 @@ function draw() {
     pulseTime += 0.05;
     scanAngle += 0.02;
 
-    /* Determine color theme */
     const tier = primaryTarget ? getThreat(primaryTarget.class.toLowerCase()) : null;
     let rr = 255, rg = 255, rb = 255;
     if (isLocked) {
-        if (tier === 'HIGH')   { rr=255; rg=20; rb=20; }
-        else if (tier==='MED') { rr=255; rg=140; rb=0; }
-        else                   { rr=255; rg=220; rb=50; }
+        if (tier === 'HIGH')   { rr=255; rg=20;  rb=20;  }
+        else if (tier==='MED') { rr=255; rg=140; rb=0;   }
+        else                   { rr=255; rg=220; rb=50;  }
     } else {
         rr=200; rg=220; rb=255;
     }
     const alpha = 0.6 + 0.4 * lockFactor;
     const mainColor = `rgba(${rr},${rg},${rb},${alpha})`;
 
-    /* EW effect */
     ewTimer++;
-    if (ewTimer % 220 === 0) { ewIntensity = 20; ewDecay = 20; }
+    if (ewTimer % 220 === 0) { ewIntensity = 20; }
     if (ewIntensity > 0) {
         ewIntensity = Math.max(0, ewIntensity - 0.7);
         document.getElementById('ewAlert').classList.add('show');
@@ -612,7 +922,6 @@ function draw() {
 
     ctx.save();
 
-    /* Glitch translation */
     if (glitchActive > 0) {
         ctx.translate((Math.random()-0.5)*12*dpr, (Math.random()-0.5)*6*dpr);
         glitchActive--;
@@ -629,7 +938,7 @@ function draw() {
     const cx = currentPos.x * dpr;
     const cy = currentPos.y * dpr;
 
-    /* ── ALL secondary detections (dim boxes) ── */
+    /* Secondary detections */
     if (allPredictions.length > 1) {
         ctx.save();
         ctx.shadowBlur = 3;
@@ -639,7 +948,6 @@ function draw() {
             const sX = window.innerWidth/(video.videoWidth||1);
             const sY = window.innerHeight/(video.videoHeight||1);
             const rx = bx*sX*dpr, ry = by*sY*dpr, rw = bw*sX*dpr, rh = bh*sY*dpr;
-
             const t = getThreat(p.class.toLowerCase());
             ctx.strokeStyle = t==='HIGH' ? 'rgba(255,80,80,0.4)'
                             : t==='MED'  ? 'rgba(255,160,0,0.35)'
@@ -649,7 +957,6 @@ function draw() {
             ctx.setLineDash([4*dpr,4*dpr]);
             ctx.strokeRect(rx, ry, rw, rh);
             ctx.setLineDash([]);
-
             ctx.fillStyle = ctx.strokeStyle;
             ctx.font = `${9*dpr}px 'Share Tech Mono'`;
             ctx.fillText(p.class.toUpperCase(), rx+4*dpr, ry-4*dpr);
@@ -657,7 +964,7 @@ function draw() {
         ctx.restore();
     }
 
-    /* ── Primary target bounding box ── */
+    /* Primary bounding box */
     if (primaryTarget && targetPos.active) {
         const p = primaryTarget;
         const [bx,by,bw,bh] = p.bbox;
@@ -671,24 +978,17 @@ function draw() {
         ctx.lineWidth   = 1.5*dpr;
         ctx.shadowBlur  = 10*lockFactor;
 
-        /* Corner bracket box */
         const cLen = Math.min(rw,rh)*0.22;
         ctx.beginPath();
-        // TL
         ctx.moveTo(rx, ry+cLen); ctx.lineTo(rx, ry); ctx.lineTo(rx+cLen, ry);
-        // TR
         ctx.moveTo(rx+rw-cLen, ry); ctx.lineTo(rx+rw, ry); ctx.lineTo(rx+rw, ry+cLen);
-        // BR
         ctx.moveTo(rx+rw, ry+rh-cLen); ctx.lineTo(rx+rw, ry+rh); ctx.lineTo(rx+rw-cLen, ry+rh);
-        // BL
         ctx.moveTo(rx+cLen, ry+rh); ctx.lineTo(rx, ry+rh); ctx.lineTo(rx, ry+rh-cLen);
         ctx.stroke();
 
-        /* Dim fill */
         ctx.fillStyle = `rgba(${rr},${rg},${rb},${0.03+0.04*lockFactor})`;
         ctx.fillRect(rx,ry,rw,rh);
 
-        /* Measurement lines */
         if (lockFactor > 0.4) {
             ctx.setLineDash([3*dpr,5*dpr]);
             ctx.lineWidth = 0.5*dpr;
@@ -698,16 +998,44 @@ function draw() {
             ctx.moveTo(rx, ry-12*dpr); ctx.lineTo(rx+rw, ry-12*dpr);
             ctx.stroke();
             ctx.setLineDash([]);
-
             ctx.fillStyle = `rgba(${rr},${rg},${rb},0.5)`;
             ctx.font = `${8*dpr}px 'Share Tech Mono'`;
             ctx.fillText(`${Math.round(rh/dpr)}px`, rx-18*dpr, ry+rh/2, 16*dpr);
             ctx.fillText(`${Math.round(rw/dpr)}px`, rx+rw/2-12*dpr, ry-14*dpr);
         }
+
+        /* ── Draw a "capture line" from bbox top-center to portrait panel (top-left) ── */
+        if (lockFactor > 0.6 && portraitPanel.classList.contains('show')) {
+            ctx.save();
+            ctx.setLineDash([4*dpr, 8*dpr]);
+            ctx.lineWidth   = 0.8*dpr;
+            ctx.strokeStyle = `rgba(${rr},${rg},${rb},${0.25 * lockFactor})`;
+            ctx.shadowBlur  = 0;
+
+            // Source: top-center of bbox
+            const srcX = rx + rw / 2;
+            const srcY = ry;
+
+            // Destination: roughly top-right corner of portrait panel (~220px wide, 50px from top)
+            const destPX = 235 * dpr;
+            const destPY = 50  * dpr;
+
+            ctx.beginPath();
+            ctx.moveTo(srcX, srcY);
+            // bezier curve for organic feel
+            ctx.bezierCurveTo(
+                srcX - (srcX - destPX)*0.4, srcY - 60*dpr,
+                destPX + 40*dpr,             destPY - 20*dpr,
+                destPX, destPY
+            );
+            ctx.stroke();
+            ctx.restore();
+        }
+
         ctx.restore();
     }
 
-    /* ── MAIN RETICLE ── */
+    /* Main reticle */
     ctx.strokeStyle = mainColor;
     ctx.fillStyle   = mainColor;
     ctx.shadowColor = mainColor;
@@ -715,21 +1043,19 @@ function draw() {
 
     drawReticle(cx, cy, dpr, lockFactor, mainColor, rr, rg, rb);
 
-    /* ── Data readout ── */
     if (lockFactor > 0.05) {
         ctx.globalAlpha = lockFactor;
         drawDataBlock(cx, cy, dpr, mainColor);
         ctx.globalAlpha = 1;
     }
 
-    /* ── EW noise ── */
+    /* EW noise */
     if (ewIntensity > 3) {
         const n = Math.round(ewIntensity * 0.8);
         for (let i=0; i<n; i++) {
             ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.15})`;
             ctx.fillRect(Math.random()*W, Math.random()*H, (1+Math.random()*2)*dpr, dpr);
         }
-        /* Random horizontal bars */
         for (let i=0; i<3; i++) {
             const hy = Math.random()*H;
             ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.08})`;
@@ -737,21 +1063,16 @@ function draw() {
         }
     }
 
-    /* ── Screen-edge corner decorations ── */
     drawCornerDeco(W, H, dpr);
-
     ctx.restore();
     requestAnimationFrame(draw);
 }
 
-/* ─────────────────────────────────────────────────
-   RETICLE -- detailed, multi-layer
-───────────────────────────────────────────────── */
+/* ── RETICLE ── */
 function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
     ctx.save();
     ctx.translate(cx, cy);
 
-    /* ── 1. Outer thin ring (always) ── */
     ctx.strokeStyle = `rgba(${rr},${rg},${rb},0.2)`;
     ctx.lineWidth   = 0.5 * dpr;
     ctx.shadowBlur  = 0;
@@ -759,7 +1080,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
     ctx.arc(0, 0, 110*dpr, 0, Math.PI*2);
     ctx.stroke();
 
-    /* ── 2. Range rings (pulsing) ── */
     if (lf > 0.1) {
         const pulse = 0.5 + 0.5*Math.sin(pulseTime*2);
         ctx.strokeStyle = `rgba(${rr},${rg},${rb},${0.08 + 0.1*pulse*lf})`;
@@ -771,7 +1091,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
         }
     }
 
-    /* ── 3. Spinning dashed arc ── */
     if (lf > 0.15) {
         ctx.save();
         ctx.rotate(pulseTime * 1.5);
@@ -786,7 +1105,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
         ctx.restore();
     }
 
-    /* ── 4. Counter-rotating dashed arc ── */
     if (lf > 0.3) {
         ctx.save();
         ctx.rotate(-pulseTime * 0.8);
@@ -800,7 +1118,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
     }
     ctx.setLineDash([]);
 
-    /* ── 5. Cardinal brackets (4 corners) ── */
     const bracketSize  = (28 - 8*lf) * dpr;
     const bracketDepth = (8  + 14*lf) * dpr;
     ctx.strokeStyle = mainColor;
@@ -819,7 +1136,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
         ctx.restore();
     }
 
-    /* ── 6. Central cross ── */
     ctx.lineWidth   = 1.5 * dpr;
     ctx.shadowBlur  = 6;
     const c = 7 * dpr;
@@ -831,13 +1147,11 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
     ctx.moveTo(0, gap); ctx.lineTo(0, c);
     ctx.stroke();
 
-    /* ── 7. Center dot ── */
     ctx.shadowBlur = 12*lf;
     ctx.beginPath();
     ctx.arc(0, 0, 2.5*dpr, 0, Math.PI*2);
     ctx.fill();
 
-    /* ── 8. Cardinal tick marks ── */
     ctx.strokeStyle = `rgba(${rr},${rg},${rb},0.5)`;
     ctx.lineWidth   = 1 * dpr;
     ctx.shadowBlur  = 0;
@@ -851,7 +1165,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
         ctx.stroke();
     }
 
-    /* ── 9. Lock burst lines ── */
     if (lf > 0.5) {
         const burst = (lf-0.5)*2;
         ctx.strokeStyle = `rgba(${rr},${rg},${rb},${0.15*burst})`;
@@ -865,10 +1178,6 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
         }
     }
 
-    /* ── 10. Scan sweep ── */
-    const sweepGrad = ctx.createConicalGradient
-        ? null
-        : null; // fallback: manual arc
     if (lf < 0.8) {
         ctx.save();
         ctx.rotate(scanAngle);
@@ -887,9 +1196,7 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
     ctx.restore();
 }
 
-/* ─────────────────────────────────────────────────
-   DATA READOUT
-───────────────────────────────────────────────── */
+/* ── DATA READOUT ── */
 function drawDataBlock(cx, cy, dpr, mainColor) {
     textTick += 0.6;
     const fs = 11*dpr;
@@ -901,17 +1208,13 @@ function drawDataBlock(cx, cy, dpr, mainColor) {
         const chars = Math.floor(textTick - i*4);
         if (chars <= 0) return;
         let line = (l.k+': '+l.v).substring(0, chars);
-
-        /* EW corruption */
         if (ewIntensity > 8 && Math.random() > 0.6) {
             line = line.replace(/[A-Z0-9]/g, c => Math.random()>0.6
                 ? String.fromCharCode(33+Math.random()*20) : c);
         }
-
         ctx.fillText('› '+line, cx + 120*dpr, cy - 30*dpr + i*fs*1.6);
     });
 
-    /* Random glitch line */
     if (Math.random() > 0.85) {
         ctx.globalAlpha = 0.3;
         ctx.fillRect(cx+115*dpr, cy+40*dpr, Math.random()*50*dpr, 1.5*dpr);
@@ -919,16 +1222,13 @@ function drawDataBlock(cx, cy, dpr, mainColor) {
     }
 }
 
-/* ─────────────────────────────────────────────────
-   CORNER DECORATIONS
-───────────────────────────────────────────────── */
+/* ── CORNER DECORATIONS ── */
 function drawCornerDeco(W, H, dpr) {
     const s = 30*dpr, t = 1*dpr;
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     ctx.lineWidth   = t;
     ctx.shadowBlur  = 0;
     ctx.setLineDash([]);
-
     const corners = [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]];
     for (const [x,y,sx,sy] of corners) {
         ctx.beginPath();
@@ -937,8 +1237,6 @@ function drawCornerDeco(W, H, dpr) {
         ctx.lineTo(x, y+sy*s);
         ctx.stroke();
     }
-
-    /* Center horizontal crosshair lines (faint) */
     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
     ctx.lineWidth   = 0.5*dpr;
     ctx.setLineDash([5*dpr,15*dpr]);
