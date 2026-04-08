@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -8,1603 +7,388 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red:    #ff2020;
+      --cyan:   #00f5ff;
+      --green:  #00ff88;
+      --white:  #ffffff;
+      --mono:   'Share Tech Mono', monospace;
+      --sans:   'Rajdhani', sans-serif;
+      --orb:    'Orbitron', monospace;
+    }
 
-```
-:root {
-  --red:    #ff2020;
-  --red-dim: rgba(255,32,32,0.15);
-  --cyan:   #00f5ff;
-  --green:  #00ff88;
-  --white:  #ffffff;
-  --dim:    rgba(255,255,255,0.08);
-  --glow:   0 0 12px rgba(255,32,32,0.6);
-  --mono:   'Share Tech Mono', monospace;
-  --sans:   'Rajdhani', sans-serif;
-  --orb:    'Orbitron', monospace;
-}
+    body {
+      margin: 0; background: #000;
+      overflow: hidden;
+      font-family: var(--mono);
+      user-select: none;
+      cursor: crosshair;
+    }
 
-body {
-  margin: 0; background: #000;
-  overflow: hidden;
-  font-family: var(--mono);
-  user-select: none;
-  cursor: crosshair;
-}
+    #container { position: relative; width: 100vw; height: 100vh; }
 
-#container { position: relative; width: 100vw; height: 100vh; }
+    #video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+      filter: brightness(0.45) contrast(1.3) saturate(0.1) hue-rotate(180deg);
+      z-index: 0;
+    }
 
-/* ── VIDEO (COCO-SSD background) ── */
-#video {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-  filter: brightness(0.45) contrast(1.3) saturate(0.1) hue-rotate(180deg);
-  z-index: 0;
-}
+    #faceCanvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      pointer-events: none;
+    }
 
-/* ── FACE CANVAS (MediaPipe overlay) ── */
-#faceCanvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  z-index: 1;
-  pointer-events: none;
-}
+    #hudCanvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
 
-/* ── HUD CANVAS (reticle / boxes) ── */
-#hudCanvas {
-  position: absolute; top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 2;
-}
+    #scanlines {
+      position: absolute; inset: 0; pointer-events: none; z-index: 5;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px);
+      animation: scanScroll 8s linear infinite;
+    }
+    @keyframes scanScroll { from { background-position: 0 0; } to { background-position: 0 100px; } }
 
-/* ── SCANLINES ── */
-#scanlines {
-  position: absolute; inset: 0; pointer-events: none; z-index: 5;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent, transparent 3px,
-    rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
-  );
-  animation: scanScroll 8s linear infinite;
-}
-@keyframes scanScroll { from { background-position: 0 0; } to { background-position: 0 100px; } }
+    #vignette {
+      position: absolute; inset: 0; pointer-events: none; z-index: 4;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
+    }
 
-/* ── VIGNETTE ── */
-#vignette {
-  position: absolute; inset: 0; pointer-events: none; z-index: 4;
-  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
-}
+    #hudButtons {
+      position: absolute; top: 20px; right: 20px;
+      display: none; gap: 10px; z-index: 20;
+      flex-direction: row;
+    }
+    #hudButtons.visible { display: flex; }
 
-/* ── TOP BAR ── */
-#topbar {
-  position: absolute; top: 0; left: 0; right: 0; height: 36px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 18px; z-index: 15; border-bottom: 1px solid rgba(255,255,255,0.07);
-}
-.tb-left, .tb-right { display: flex; gap: 20px; align-items: center; }
-.tb-label {
-  font-family: var(--sans); font-size: 10px; font-weight: 700;
-  letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.4);
-}
-.tb-val {
-  font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.7);
-  letter-spacing: 1px;
-}
-#sysId { color: #fff; font-size: 11px; letter-spacing: 4px; font-family: var(--sans); font-weight: 700; }
+    .ui-btn {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+      cursor: pointer; text-transform: uppercase; pointer-events: all;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(10px);
+      border: 1px solid rgba(0,245,255,0.3); color: var(--cyan);
+      padding: 8px 15px; transition: all .2s; position: relative; overflow: hidden;
+    }
+    .ui-btn:hover { border-color: var(--cyan); box-shadow: 0 0 12px rgba(0,245,255,0.4); }
 
-/* ── BOTTOM BAR ── */
-#botbar {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
-  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 18px; z-index: 15; border-top: 1px solid rgba(255,255,255,0.07);
-}
-.coords { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; }
+    #terminal {
+      position: absolute; bottom: 50px; left: 15px;
+      width: 320px; max-height: 220px;
+      overflow: hidden; z-index: 15;
+    }
+    .log-entry {
+      font-size: 10px; letter-spacing: 1.5px; line-height: 1.6;
+      text-transform: uppercase; display: flex; gap: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+    .log-entry.info { color: var(--white); }
+    .log-entry.threat { color: var(--red); text-shadow: 0 0 5px var(--red); }
+    .log-entry.speech { color: var(--green); text-shadow: 0 0 5px var(--green); }
+    
+    .log-ts { color: rgba(255,255,255,0.3); flex-shrink: 0; }
+    #cursor { display: inline-block; width: 7px; height: 12px; background: var(--white); animation: blink 0.8s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
 
-/* ── TERMINAL ── */
-#terminal {
-  position: absolute; bottom: 50px; left: 15px;
-  width: 300px; max-height: 200px;
-  overflow: hidden; z-index: 15;
-}
-.log-entry {
-  font-size: 10px; letter-spacing: 1.5px; line-height: 1.8;
-  text-transform: uppercase; color: rgba(255,255,255,0.5);
-  display: flex; gap: 8px; align-items: baseline;
-  animation: fadeIn 0.3s ease;
-}
-.log-entry.threat { color: var(--red); }
-.log-entry.info { color: rgba(255,255,255,0.6); }
-.log-entry.speech { color: var(--green); }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-.log-ts { color: rgba(255,255,255,0.2); flex-shrink: 0; }
-.log-prefix { color: rgba(255,255,255,0.25); }
+    #statusPanel {
+      position: absolute; top: 80px; right: 20px;
+      width: 180px; z-index: 15;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .sp-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 4px; }
+    .sp-key { font-family: var(--sans); font-size: 9px; letter-spacing: 1px; color: rgba(255,255,255,0.3); }
+    .sp-val { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.7); }
 
-#cursor {
-  display: inline-block; width: 7px; height: 12px;
-  background: rgba(255,255,255,0.5);
-  animation: blink 0.8s steps(1) infinite;
-  vertical-align: middle; margin-left: 2px;
-}
-@keyframes blink { 50% { opacity: 0; } }
+    #startBtn {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: none; border: none; color: #fff; z-index: 20; cursor: pointer;
+    }
+    .btn-inner { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+    .btn-text { font-family: var(--sans); letter-spacing: 5px; text-transform: uppercase; font-size: 11px; }
 
-/* ── STATUS PANEL (right) ── */
-#statusPanel {
-  position: absolute; top: 50px; right: 15px;
-  width: 200px; z-index: 15;
-  display: flex; flex-direction: column; gap: 6px;
-}
-.sp-row {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  padding-bottom: 4px;
-}
-.sp-key {
-  font-family: var(--sans); font-size: 9px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.3);
-}
-.sp-val {
-  font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.65);
-  letter-spacing: 1px;
-}
-.sp-val.active { color: var(--red); text-shadow: 0 0 8px var(--red); }
-.sp-val.face-active { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
+    #face-info {
+      position: absolute; z-index: 12; pointer-events: none;
+      font-size: 9px; color: var(--cyan); opacity: 0; transition: opacity 0.3s;
+      text-align: center; transform: translateX(-50%); text-shadow: 0 0 8px var(--cyan);
+    }
+    #face-info.visible { opacity: 1; }
 
-.bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.1); position: relative; }
-.bar-fill {
-  height: 100%; background: rgba(255,255,255,0.5);
-  transition: width 0.3s ease;
-}
-.bar-fill.danger { background: var(--red); box-shadow: 0 0 6px var(--red); }
-.bar-fill.face   { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+    #audioVizWrap {
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      width: 300px; z-index: 15; opacity: 0; transition: opacity 0.5s;
+    }
+    #audioVizWrap.visible { opacity: 1; }
+    #audioVisualizer { width: 100%; height: 30px; }
 
-/* ── START BUTTON ── */
-#startBtn {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  background: none; border: none; color: #fff;
-  font-family: var(--sans); font-size: 11px; font-weight: 700;
-  letter-spacing: 5px; text-transform: uppercase;
-  cursor: pointer; z-index: 20; outline: none; padding: 0;
-}
-#startBtn .btn-inner { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-#startBtn .btn-ring { width: 80px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
-.ring-svg  { position: absolute; inset: 0; animation: spinRing 4s linear infinite; }
-.ring-svg2 { position: absolute; inset: 6px; animation: spinRing 7s linear infinite reverse; }
-@keyframes spinRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-#startBtn .btn-text { letter-spacing: 6px; opacity: 0.7; }
-#startBtn:hover .btn-text { opacity: 1; }
-#startBtn:hover .ring-svg { animation-duration: 1.5s; }
+    #liveSpeechBox {
+      position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+      font-family: var(--orb); font-size: 14px; color: #fff;
+      z-index: 16; opacity: 0; transition: 0.3s; text-align: center;
+    }
+    #liveSpeechBox.visible { opacity: 1; }
+    #liveSpeechBox.speaking { color: var(--green); text-shadow: 0 0 15px var(--green); }
 
-/* ── COMPASS ── */
-#compass {
-  position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-  z-index: 15; display: flex; align-items: center; gap: 2px;
-}
-.comp-tick { width: 1px; height: 8px; background: rgba(255,255,255,0.15); }
-.comp-tick.major { height: 14px; background: rgba(255,255,255,0.35); }
-.comp-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1px; padding: 0 3px; font-family: var(--sans); font-weight: 700; }
-#compassN { color: var(--red) !important; }
-
-/* ── THREAT BOX ── */
-#threatBox {
-  position: absolute; top: 50%; right: 220px;
-  transform: translateY(-50%);
-  z-index: 15; width: 180px;
-  opacity: 0; transition: opacity 0.4s;
-}
-#threatBox.show { opacity: 1; }
-.tb-header {
-  font-family: var(--sans); font-size: 9px; font-weight: 700;
-  letter-spacing: 3px; color: var(--red); border-bottom: 1px solid rgba(255,32,32,0.3);
-  padding-bottom: 6px; margin-bottom: 8px; text-transform: uppercase;
-}
-.tbi { font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1px; line-height: 2; }
-.tbi-key { color: rgba(255,255,255,0.3); font-size: 9px; }
-
-/* ── EW ALERT ── */
-#ewAlert {
-  position: absolute; top: 50px; right: 220px;
-  font-family: var(--sans); font-size: 9px; font-weight: 700;
-  letter-spacing: 3px; color: var(--red);
-  opacity: 0; transition: opacity 0.2s;
-  z-index: 15; text-transform: uppercase;
-}
-#ewAlert.show { opacity: 1; }
-
-/* ── FACE INFO (above forehead) ── */
-#face-info {
-  position: absolute; z-index: 12; pointer-events: none;
-  font-size: 9px; letter-spacing: 1.5px; line-height: 1.8;
-  color: var(--cyan); opacity: 0; transition: opacity 0.3s;
-  text-align: center; transform: translateX(-50%);
-  white-space: nowrap;
-  text-shadow: 0 0 8px var(--cyan);
-}
-#face-info.visible { opacity: 1; }
-#face-info span { display: block; }
-@keyframes glitchText {
-  0%  { clip-path: inset(0 0 90% 0); transform: translateX(-50%) translate(-2px,0); }
-  15% { clip-path: inset(30% 0 50% 0); transform: translateX(-50%) translate(2px,0); }
-  30% { clip-path: inset(70% 0 10% 0); transform: translateX(-50%) translate(-1px,0); }
-  50%,100% { clip-path: none; transform: translateX(-50%); }
-}
-#face-info.glitch { animation: glitchText .35s steps(1); }
-
-/* ── FACE TARGET LABEL ── */
-#face-target-label {
-  position: absolute; top: calc(50% + 74px); left: 50%; transform: translateX(-50%);
-  font-family: var(--orb); font-size: 9px; letter-spacing: 4px; color: var(--cyan);
-  opacity: 0; transition: opacity 0.3s; white-space: nowrap;
-  text-shadow: 0 0 10px var(--cyan); pointer-events: none; z-index: 15;
-}
-#face-target-label.visible { opacity: 1; }
-
-/* ── FACE METRICS (left side) ── */
-#faceMetrics {
-  position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-  z-index: 15; pointer-events: none;
-  display: flex; flex-direction: column; gap: 16px;
-  opacity: 0; transition: opacity 0.5s;
-}
-#faceMetrics.visible { opacity: 1; }
-.metric-block { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
-.metric-label { font-size: 7px; letter-spacing: 3px; color: rgba(0,245,255,0.4); }
-.metric-bar { width: 80px; height: 2px; background: rgba(0,245,255,0.1); position: relative; overflow: hidden; }
-.metric-fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); transition: width 0.4s ease; }
-.metric-value { font-size: 9px; letter-spacing: 2px; color: var(--cyan); }
-
-/* ── ACQUIRED FLASH ── */
-#acquired-flash {
-  position: absolute; inset: 0; pointer-events: none; z-index: 16; opacity: 0;
-}
-#acquired-flash.flash { animation: aFlash 0.6s ease forwards; }
-@keyframes aFlash { 0%{opacity:0;background:rgba(0,255,136,0.12)} 30%{opacity:1} 100%{opacity:0} }
-
-/* ── AUDIO VISUALIZER ── */
-#audioVizWrap {
-  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-  width: min(400px, 60vw); z-index: 15; pointer-events: none;
-  opacity: 0; transition: opacity 0.5s;
-}
-#audioVizWrap.visible { opacity: 1; }
-#audioVizLabel {
-  font-size: 7px; letter-spacing: 3px; color: rgba(0,245,255,0.3);
-  text-align: right; margin-bottom: 3px;
-}
-#audioVisualizer { width: 100%; height: 40px; display: block; }
-
-/* ── LIVE SPEECH BOX ── */
-#liveSpeechBox {
-  position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%);
-  font-family: var(--orb); font-size: clamp(11px, 2vw, 16px); font-weight: 700;
-  letter-spacing: 3px; color: #fff; white-space: nowrap;
-  text-shadow: 0 0 20px rgba(255,255,255,0.4);
-  z-index: 16; pointer-events: none;
-  opacity: 0; transition: opacity 0.3s, color 0.3s;
-}
-#liveSpeechBox.visible { opacity: 1; }
-#liveSpeechBox.speaking { color: var(--green); text-shadow: 0 0 20px var(--green); }
-
-/* ── HUD BUTTONS (top-right after start) ── */
-#hudButtons {
-  position: absolute; top: 45px; right: 220px;
-  display: none; gap: 6px; z-index: 20;
-  flex-direction: row;
-}
-#hudButtons.visible { display: flex; }
-.ui-btn {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
-  cursor: pointer; text-transform: uppercase; pointer-events: all;
-  background: rgba(0,0,0,0.65); backdrop-filter: blur(10px);
-  border: 1px solid rgba(0,245,255,0.3); color: rgba(0,245,255,0.7);
-  padding: 6px 12px; transition: all .2s; position: relative; overflow: hidden;
-}
-.ui-btn .st-a, .ui-btn .st-b { display: block; transition: transform .25s, opacity .25s; }
-.ui-btn .st-b { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) translateY(14px); opacity: 0; white-space: nowrap; }
-.ui-btn:hover .st-a { transform: translateY(-14px); opacity: 0; }
-.ui-btn:hover .st-b { transform: translate(-50%,-50%) translateY(0); opacity: 1; }
-.ui-btn:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 12px rgba(0,245,255,0.3); }
-.ui-btn.lang-active { border-color: rgba(0,255,136,0.5); color: var(--green); }
-
-/* ── FACE STATUS ROW in statusPanel ── */
-.sp-separator {
-  border-top: 1px solid rgba(0,245,255,0.15);
-  margin: 4px 0;
-}
-```
-
+    #threatBox {
+      position: absolute; top: 300px; right: 20px;
+      z-index: 15; width: 180px; opacity: 0; transition: 0.4s;
+    }
+    #threatBox.show { opacity: 1; }
+    .tb-header { color: var(--red); font-size: 10px; border-bottom: 1px solid var(--red); margin-bottom: 5px; }
+    .tbi { font-size: 10px; color: #fff; line-height: 1.8; }
   </style>
 </head>
 <body>
 <div id="container">
-
-  <!-- START BUTTON -->
-
   <button id="startBtn">
     <div class="btn-inner">
-      <div class="btn-ring">
-        <svg class="ring-svg" viewBox="0 0 80 80" fill="none">
-          <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="8 4"/>
-          <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-dasharray="20 160" stroke-linecap="round"/>
-        </svg>
-        <svg class="ring-svg2" viewBox="0 0 68 68" fill="none">
-          <circle cx="34" cy="34" r="30" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3 6"/>
-        </svg>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="2" fill="white" opacity="0.9"/>
-          <line x1="12" y1="4" x2="12" y2="8" stroke="white" stroke-width="1.5" opacity="0.6"/>
-          <line x1="12" y1="16" x2="12" y2="20" stroke="white" stroke-width="1.5" opacity="0.6"/>
-          <line x1="4" y1="12" x2="8" y2="12" stroke="white" stroke-width="1.5" opacity="0.6"/>
-          <line x1="16" y1="12" x2="20" y2="12" stroke="white" stroke-width="1.5" opacity="0.6"/>
-        </svg>
-      </div>
+      <svg width="60" height="60" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="1" />
+        <path d="M40 10 L40 20 M70 40 L60 40 M40 70 L40 60 M10 40 L20 40" stroke="white" />
+      </svg>
       <span class="btn-text">initialize system</span>
     </div>
   </button>
 
-  <!-- OVERLAYS -->
-
   <div id="vignette"></div>
   <div id="scanlines"></div>
-
-  <!-- VIDEO (COCO-SSD feed) -->
-
-<video id="video" autoplay playsinline muted></video>
-
-  <!-- Hidden video for MediaPipe (same stream) -->
-
-<video id="faceVideo" autoplay playsinline muted style="display:none;position:absolute;z-index:-1;"></video>
-
-  <!-- FACE MESH CANVAS -->
-
-<canvas id="faceCanvas"></canvas>
-
-  <!-- HUD CANVAS -->
-
-<canvas id="hudCanvas"></canvas>
-
-  <!-- ACQUIRED FLASH -->
-
-  <div id="acquired-flash"></div>
-
-  <!-- TOP BAR -->
-
-  <div id="topbar">
-    <div class="tb-left">
-      <span class="tb-val" id="sysId">myFIX</span>
-    </div>
-    <div class="tb-left">
-      <span class="tb-label">mode</span>
-      <span class="tb-val" id="modeVal">PASSIVE</span>
-      <span class="tb-label">obj</span>
-      <span class="tb-val" id="objCount">00</span>
-    </div>
-    <div class="tb-right">
-      <span class="tb-label">time</span>
-      <span class="tb-val" id="clockVal">--:--:--</span>
-    </div>
-  </div>
-
-  <!-- COMPASS -->
-
-  <div id="compass" style="display:none">
-    <div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label" id="compassN">N</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">NE</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">E</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">SE</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">S</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">SW</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">W</span>
-    <div class="comp-tick"></div><div class="comp-tick"></div>
-    <div class="comp-tick major"></div><span class="comp-label">NW</span>
-    <div class="comp-tick"></div>
-  </div>
-
-  <!-- STATUS PANEL -->
-
-  <div id="statusPanel" style="display:none">
-    <!-- COCO-SSD rows -->
-    <div class="sp-row">
-      <span class="sp-key">network</span>
-      <span class="sp-val active" id="netStat">ONLINE</span>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">model</span>
-      <span class="sp-val" id="modelStat">LOADING</span>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">targets</span>
-      <span class="sp-val" id="targStat">0</span>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">lock</span>
-      <span class="sp-val" id="lockStat">--</span>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">conf</span>
-      <div class="bar-wrap"><div class="bar-fill" id="confBar" style="width:0%"></div></div>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">ew</span>
-      <div class="bar-wrap"><div class="bar-fill" id="ewBar" style="width:0%"></div></div>
-    </div>
-    <!-- Separator -->
-    <div class="sp-separator"></div>
-    <!-- Face rows -->
-    <div class="sp-row">
-      <span class="sp-key">face</span>
-      <span class="sp-val face-active" id="faceStat">SCANNING</span>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">symmetry</span>
-      <div class="bar-wrap"><div class="bar-fill face" id="symmBar" style="width:0%"></div></div>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">mesh pts</span>
-      <span class="sp-val" id="meshPts">478</span>
-    </div>
-    <div class="sp-row">
-      <span class="sp-key">audio</span>
-      <span class="sp-val" id="audioStat">--</span>
-    </div>
-  </div>
-
-  <!-- HUD BUTTONS -->
+  <video id="video" autoplay playsinline muted></video>
+  <video id="faceVideo" autoplay playsinline muted style="display:none;"></video>
+  <canvas id="faceCanvas"></canvas>
+  <canvas id="hudCanvas"></canvas>
 
   <div id="hudButtons">
-    <button class="ui-btn" id="exportBtn">
-      <span class="st-a">Export Log</span>
-      <span class="st-b">Save .TXT</span>
-    </button>
-    <button class="ui-btn lang-active" id="langBtn">
-      <span class="st-a" id="langA">RU</span>
-      <span class="st-b" id="langB">Switch: UK</span>
-    </button>
-    <button class="ui-btn" id="switchCamBtn">
-      <span class="st-a" id="camA">Front</span>
-      <span class="st-b" id="camB">Back Cam</span>
-    </button>
+    <button class="ui-btn" id="exportBtn">Log</button>
+    <button class="ui-btn" id="langBtn">RU</button>
+    <button class="ui-btn" id="switchCamBtn">Cam</button>
   </div>
 
-  <!-- EW ALERT -->
-
-  <div id="ewAlert">⚠ EW INTERFERENCE</div>
-
-  <!-- THREAT INFO BOX -->
+  <div id="statusPanel" style="display:none">
+    <div class="sp-row"><span class="sp-key">MODEL</span><span class="sp-val">COCO-SSD</span></div>
+    <div class="sp-row"><span class="sp-key">FACE</span><span class="sp-val" id="faceStat">SCAN</span></div>
+    <div class="sp-row"><span class="sp-key">AUDIO</span><span class="sp-val" id="audioStat">OFF</span></div>
+  </div>
 
   <div id="threatBox">
-    <div class="tb-header">// target acquired</div>
+    <div class="tb-header">// TARGET ACQUIRED</div>
     <div id="threatLines"></div>
   </div>
 
-  <!-- FACE INFO (above forehead) -->
-
   <div id="face-info">
-    <span id="fi-0"></span>
-    <span id="fi-1"></span>
-    <span id="fi-2"></span>
+    <span id="fi-0"></span><br><span id="fi-1"></span>
   </div>
-
-  <!-- FACE TARGET LABEL -->
-
-  <div id="face-target-label">BIOMETRIC ACQUIRED</div>
-
-  <!-- FACE METRICS (left) -->
-
-  <div id="faceMetrics">
-    <div class="metric-block">
-      <div class="metric-label">SYMMETRY</div>
-      <div class="metric-bar"><div class="metric-fill" id="m-symmetry" style="width:0%"></div></div>
-      <div class="metric-value" id="mv-symmetry">--</div>
-    </div>
-    <div class="metric-block">
-      <div class="metric-label">CONFIDENCE</div>
-      <div class="metric-bar"><div class="metric-fill" id="m-conf" style="width:0%"></div></div>
-      <div class="metric-value" id="mv-conf">--</div>
-    </div>
-    <div class="metric-block">
-      <div class="metric-label">MESH PTS</div>
-      <div class="metric-bar"><div class="metric-fill" style="width:78%"></div></div>
-      <div class="metric-value">478</div>
-    </div>
-  </div>
-
-  <!-- AUDIO VISUALIZER -->
 
   <div id="audioVizWrap">
-    <div id="audioVizLabel">AUDIO // dB</div>
     <canvas id="audioVisualizer"></canvas>
   </div>
-
-  <!-- LIVE SPEECH BOX -->
-
   <div id="liveSpeechBox">...</div>
-
-  <!-- TERMINAL -->
-
   <div id="terminal"><span id="cursor"></span></div>
-
-  <!-- BOTTOM BAR -->
-
-  <div id="botbar" style="display:none">
-    <span class="coords" id="coordsL">LAT 00°00'00"N  LON 000°00'00"E</span>
-    <span class="coords" id="coordsR">ALT --m  SPD --kts  HDG --°</span>
-  </div>
-
 </div>
 
-<!-- TensorFlow + COCO-SSD -->
-
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
-
-<!-- MediaPipe -->
-
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
-
 <script>
-/* ═══════════════════════════════════════════════════
-   THREAT CLASSIFICATION (COCO-SSD)
-═══════════════════════════════════════════════════ */
-const THREAT = {
-  HIGH:   ['person','car','truck','bus','motorcycle','airplane','boat','train'],
-  MEDIUM: ['bicycle','horse','cow','dog','cat','bird','sheep','bear','elephant','zebra','giraffe'],
-  LOW:    ['backpack','handbag','suitcase','bottle','wine glass','cup','fork','knife',
-           'scissors','laptop','cell phone','remote','keyboard','mouse','chair','couch',
-           'tv','clock','book','umbrella','fire hydrant','stop sign','parking meter',
-           'bench','potted plant','dining table','toilet','bed','refrigerator',
-           'oven','microwave','toaster','sink','baseball bat','baseball glove',
-           'skateboard','surfboard','tennis racket','sports ball','frisbee',
-           'snowboard','skis','kite','vase','tie','hair drier',
-           'toothbrush','teddy bear','traffic light','orange','apple','sandwich',
-           'broccoli','carrot','hot dog','pizza','donut','cake','banana']
-};
-function getThreat(cls) {
-  if (THREAT.HIGH.includes(cls))   return 'HIGH';
-  if (THREAT.MEDIUM.includes(cls)) return 'MED';
-  return 'LOW';
-}
+const video = document.getElementById('video');
+const faceVideo = document.getElementById('faceVideo');
+const hudCanvas = document.getElementById('hudCanvas');
+const faceCanvas = document.getElementById('faceCanvas');
+const hCtx = hudCanvas.getContext('2d');
+const fCtx = faceCanvas.getContext('2d');
+const startBtn = document.getElementById('startBtn');
+const terminal = document.getElementById('terminal');
+const cursor = document.getElementById('cursor');
 
-/* ═══════════════════════════════════════════════════
-   DOM REFS
-═══════════════════════════════════════════════════ */
-const video       = document.getElementById('video');
-const faceVideo   = document.getElementById('faceVideo');
-const hudCanvas   = document.getElementById('hudCanvas');
-const faceCanvas  = document.getElementById('faceCanvas');
-const hCtx        = hudCanvas.getContext('2d');
-const fCtx        = faceCanvas.getContext('2d');
-const startBtn    = document.getElementById('startBtn');
-const terminal    = document.getElementById('terminal');
-const cursor      = document.getElementById('cursor');
-
-/* ═══════════════════════════════════════════════════
-   COCO-SSD STATE
-═══════════════════════════════════════════════════ */
-let cocoModel;
+let cocoModel, faceMeshModel, recognition;
 let allPredictions = [];
-let primaryTarget  = null;
-let currentPos  = { x: window.innerWidth/2,  y: window.innerHeight/2 };
-let targetPos   = { x: window.innerWidth/2,  y: window.innerHeight/2, active: false };
-let isLocked    = false;
-let lockFactor  = 0;
-let pulseTime   = 0;
-let scanAngle   = 0;
-let textTick    = 0;
-let infoLines   = [];
-let glitchActive = 0;
-let ewIntensity  = 0;
-let ewTimer      = 0;
+let isSpeaking = false;
+let currentLang = 'ru-RU';
+let audioCtx, analyser, freqData;
 
-/* ═══════════════════════════════════════════════════
-   FACE STATE
-═══════════════════════════════════════════════════ */
-let faceMeshModel    = null;
-let camInstance      = null;
-let facingMode       = 'user';
-let mirrorX          = true;
-let prevFaceTarget   = false;
-let acquiredLogged   = false;
-let isSpeaking       = false;
-let recognition      = null;
-let recRestarting    = false;
-let currentLang      = 'ru-RU';
-let _SR              = null;
-let faceFrameCount   = 0;
-let lastFpsFaceTime  = performance.now();
-let audioCtxNode, analyser, freqData;
-let activeStream     = null;
-let logHistory       = [];
-
-// Face info typing state
-let frameGlitch    = false;
-let frameGlitchEnd = 0;
-let typeLines      = ['', '', ''];
-let typeTargets    = ['ID: --', 'CONF: --', 'SCAN: ACTIVE'];
-let typeIdx = 0, typeCharIdx = 0, typeTimer = 0, typeDone = false;
-
-/* ═══════════════════════════════════════════════════
-   TERMINAL LOGGER (typed, unified)
-═══════════════════════════════════════════════════ */
-function ts() {
-  const n = new Date();
-  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
-}
-
-const logQueue = [];
-let logBusy = false;
-
-async function typeLog(msg, cls = 'info') {
-  await new Promise(res => {
-    logQueue.push({ msg, cls, res });
-    if (!logBusy) drainLog();
-  });
-}
-
-function addInstantLog(msg, cls = 'info') {
+/* --- LOGGER --- */
+function addLog(msg, type = 'info') {
   const entry = document.createElement('div');
-  entry.className = `log-entry ${cls}`;
-  const tsSpan = document.createElement('span');
-  tsSpan.className = 'log-ts';
-  tsSpan.textContent = ts();
-  const pre = document.createElement('span');
-  pre.className = 'log-prefix';
-  pre.textContent = '›';
-  const txt = document.createElement('span');
-  txt.textContent = msg;
-  entry.appendChild(tsSpan);
-  entry.appendChild(pre);
-  entry.appendChild(txt);
+  entry.className = `log-entry ${type}`;
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  entry.innerHTML = `<span class="log-ts">${time}</span> <span>› ${msg}</span>`;
   terminal.insertBefore(entry, cursor);
-  while (terminal.querySelectorAll('.log-entry').length > 14)
-    terminal.removeChild(terminal.querySelector('.log-entry'));
-  terminal.scrollTop = terminal.scrollHeight;
-  logHistory.push(`[${ts()}] ${msg.toUpperCase()}`);
+  if (terminal.children.length > 12) terminal.removeChild(terminal.firstChild);
 }
 
-async function drainLog() {
-  if (logQueue.length === 0) { logBusy = false; return; }
-  logBusy = true;
-  const { msg, cls, res } = logQueue.shift();
-  const entry = document.createElement('div');
-  entry.className = `log-entry ${cls}`;
-  const tsSpan = document.createElement('span');
-  tsSpan.className = 'log-ts'; tsSpan.textContent = ts();
-  const pre = document.createElement('span');
-  pre.className = 'log-prefix'; pre.textContent = '›';
-  const txt = document.createElement('span');
-  entry.appendChild(tsSpan); entry.appendChild(pre); entry.appendChild(txt);
-  terminal.insertBefore(entry, cursor);
-  while (terminal.querySelectorAll('.log-entry').length > 14)
-    terminal.removeChild(terminal.querySelector('.log-entry'));
-  for (let i = 0; i <= msg.length; i++) {
-    txt.textContent = msg.substring(0, i);
-    await new Promise(r => setTimeout(r, 18));
-  }
-  logHistory.push(`[${ts()}] ${msg.toUpperCase()}`);
-  res();
-  drainLog();
-}
-
-/* ═══════════════════════════════════════════════════
-   CLOCK + COORDS
-═══════════════════════════════════════════════════ */
-setInterval(() => {
-  const n = new Date();
-  document.getElementById('clockVal').textContent =
-    `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
-}, 1000);
-
-let lat = 55.7558 + (Math.random()-0.5)*0.01;
-let lon = 37.6173 + (Math.random()-0.5)*0.01;
-setInterval(() => {
-  lat += (Math.random()-0.5)*0.00005;
-  lon += (Math.random()-0.5)*0.00005;
-  const latStr = `${Math.floor(Math.abs(lat))}°${String(Math.floor((Math.abs(lat)%1)*60)).padStart(2,'0')}'${String(((Math.abs(lat)%1*60)%1*60)|0).padStart(2,'0')}"${lat>0?'N':'S'}`;
-  const lonStr = `${Math.floor(Math.abs(lon))}°${String(Math.floor((Math.abs(lon)%1)*60)).padStart(2,'0')}'${String(((Math.abs(lon)%1*60)%1*60)|0).padStart(2,'0')}"${lon>0?'E':'W'}`;
-  document.getElementById('coordsL').textContent = `LAT ${latStr}  LON ${lonStr}`;
-  const hdg = (360 + Math.round(45 + Math.sin(Date.now()/10000)*20)) % 360;
-  document.getElementById('coordsR').textContent = `ALT ${180 + Math.round(Math.sin(Date.now()/7000)*5)}m  SPD ${Math.round(12+Math.random()*2)}kts  HDG ${hdg}°`;
-}, 1500);
-
-/* ═══════════════════════════════════════════════════
-   START SEQUENCE
-═══════════════════════════════════════════════════ */
+/* --- START --- */
 startBtn.onclick = async () => {
-  startBtn.style.opacity = '0';
-  startBtn.style.transition = 'opacity 0.5s';
-  setTimeout(() => startBtn.style.display = 'none', 500);
-
+  startBtn.style.display = 'none';
   document.getElementById('statusPanel').style.display = 'flex';
-  document.getElementById('compass').style.display    = 'flex';
-  document.getElementById('botbar').style.display     = 'flex';
-
-  await typeLog('BOOT SEQUENCE INITIATED', 'info');
-  await typeLog('REQUESTING SENSOR ACCESS..', 'info');
-
-  try {
-    // Request audio + video together for MediaPipe + COCO-SSD + audio
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: true
-    });
-    activeStream = stream;
-
-    // Feed both video elements from the same stream
-    video.srcObject = stream;
-    faceVideo.srcObject = stream;
-    await Promise.all([
-      new Promise(r => { video.onloadedmetadata = r; }),
-      new Promise(r => { faceVideo.onloadedmetadata = r; })
-    ]);
-    await typeLog('OPTICAL SENSOR OK', 'info');
-
-    // Audio analyser
-    audioCtxNode = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtxNode.createAnalyser();
-    analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.75;
-    audioCtxNode.createMediaStreamSource(stream).connect(analyser);
-    freqData = new Uint8Array(analyser.frequencyBinCount);
-    document.getElementById('audioStat').textContent  = 'ACTIVE';
-    document.getElementById('audioVizWrap').classList.add('visible');
-    document.getElementById('liveSpeechBox').classList.add('visible');
-    startEQ();
-    await typeLog('AUDIO SUBSYSTEM OK', 'info');
-
-  } catch(e) {
-    await typeLog('SENSOR LINK FAILED', 'threat');
-    console.error(e);
-    return;
-  }
-
-  // COCO-SSD
-  await typeLog('LOADING NEURAL NETWORK..', 'info');
-  cocoModel = await cocoSsd.load();
-  document.getElementById('modelStat').textContent = 'COCO-SSD';
-  document.getElementById('modeVal').textContent   = 'ACTIVE';
-  await typeLog('COCO-SSD ONLINE -- 80 CLASS', 'info');
-
-  // MediaPipe Face Mesh
-  await typeLog('LOADING FACE MESH ENGINE..', 'info');
-  initFaceMesh();
-  await typeLog('FACE MESH ONLINE -- 478 PTS', 'info');
-  await typeLog('SCANNING...', 'info');
-
-  // Speech
-  initSpeech();
-
-  // Show HUD buttons
   document.getElementById('hudButtons').classList.add('visible');
+  
+  addLog('SYSTEM BOOT', 'info');
 
-  resize();
-  cocoDetectLoop();
-  drawHUD();
+  const stream = await navigator.mediaDevices.getUserMedia({ 
+    video: { facingMode: 'user', width: 1280, height: 720 }, 
+    audio: true 
+  });
+  video.srcObject = stream;
+  faceVideo.srcObject = stream;
+
+  audioCtx = new AudioContext();
+  analyser = audioCtx.createAnalyser();
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+  freqData = new Uint8Array(analyser.frequencyBinCount);
+  document.getElementById('audioVizWrap').classList.add('visible');
+  document.getElementById('audioStat').textContent = 'ON';
+
+  cocoModel = await cocoSsd.load();
+  addLog('NEURAL NET ONLINE', 'info');
+
+  initFaceMesh();
+  initSpeech();
+  
+  requestAnimationFrame(mainLoop);
+  detectObjects();
 };
 
-/* ═══════════════════════════════════════════════════
-   RESIZE
-═══════════════════════════════════════════════════ */
-function resize() {
-  const dpr = window.devicePixelRatio;
-  hudCanvas.width  = window.innerWidth  * dpr;
-  hudCanvas.height = window.innerHeight * dpr;
-}
-window.onresize = resize;
-
-/* ═══════════════════════════════════════════════════
-   COCO-SSD DETECTION LOOP
-═══════════════════════════════════════════════════ */
-async function cocoDetectLoop() {
+/* --- OBJECT DETECTION (COCO) --- */
+async function detectObjects() {
   if (cocoModel && video.readyState >= 3) {
-    try {
-      allPredictions = await cocoModel.detect(video);
-      primaryTarget  = allPredictions.length > 0 ? allPredictions[0] : null;
-    } catch { /* ignore */ }
+    allPredictions = await cocoModel.detect(video);
+    allPredictions.forEach(p => {
+      const cls = p.class.toLowerCase();
+      if (['person', 'car', 'truck', 'bus', 'motorcycle'].includes(cls)) {
+        addLog(`DETECTED: ${cls.toUpperCase()}`, 'threat');
+      }
+    });
   }
-
-  if (primaryTarget) {
-    const p = primaryTarget;
-    const [x, y, w, h] = p.bbox;
-    const sX = window.innerWidth  / (video.videoWidth  || 1);
-    const sY = window.innerHeight / (video.videoHeight || 1);
-    targetPos.x = (x + w/2) * sX;
-    targetPos.y = (y + h/2) * sY;
-    targetPos.active = true;
-
-    const dist = Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y);
-    const wasLocked = isLocked;
-    isLocked = dist < 130;
-
-    if (isLocked && !wasLocked) {
-      textTick = 0;
-      buildInfo(p);
-      document.getElementById('threatBox').classList.add('show');
-      document.getElementById('lockStat').textContent = p.class.toUpperCase();
-      document.getElementById('lockStat').className   = 'sp-val active';
-      glitchActive = 12;
-      typeLog(`LOCK -- ${p.class.toUpperCase()} [${getThreat(p.class.toLowerCase())}]`, 'threat');
-    }
-    if (!isLocked && wasLocked) {
-      document.getElementById('threatBox').classList.remove('show');
-      document.getElementById('lockStat').textContent = '--';
-      document.getElementById('lockStat').className   = 'sp-val';
-    }
-
-    document.getElementById('objCount').textContent = String(allPredictions.length).padStart(2,'0');
-    document.getElementById('targStat').textContent = allPredictions.length;
-    document.getElementById('confBar').style.width  = Math.round(p.score*100)+'%';
-    document.getElementById('confBar').className    = 'bar-fill' + (isLocked ? ' danger' : '');
-
-  } else {
-    targetPos.active = false;
-    isLocked = false;
-    document.getElementById('objCount').textContent = '00';
-    document.getElementById('targStat').textContent = '0';
-    document.getElementById('confBar').style.width  = '0%';
-    document.getElementById('threatBox').classList.remove('show');
-    document.getElementById('lockStat').textContent = '--';
-    document.getElementById('lockStat').className   = 'sp-val';
-  }
-  setTimeout(cocoDetectLoop, 80);
+  setTimeout(detectObjects, 1500);
 }
 
-function buildInfo(p) {
-  const tier = getThreat(p.class.toLowerCase());
-  infoLines = [
-    { k: 'CLASS',  v: p.class.toUpperCase() },
-    { k: 'THREAT', v: tier },
-    { k: 'CONF',   v: Math.round(p.score*100)+'%' },
-    { k: 'ID',     v: '0x'+Math.random().toString(16).slice(2,8).toUpperCase() },
-    { k: 'SECTOR', v: `${String.fromCharCode(65+Math.floor(Math.random()*6))}${Math.floor(Math.random()*9+1)}` },
-    { k: 'STATUS', v: 'LOCKED' },
-  ];
-  const tl = document.getElementById('threatLines');
-  tl.innerHTML = '';
-  infoLines.forEach(l => {
-    const row = document.createElement('div');
-    row.className = 'tbi';
-    row.innerHTML = `<span class="tbi-key">${l.k}</span>  ${l.v}`;
-    tl.appendChild(row);
-  });
-}
-
-/* ═══════════════════════════════════════════════════
-   HUD DRAW LOOP (hudCanvas)
-═══════════════════════════════════════════════════ */
-function drawHUD() {
-  hCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
-  const dpr = window.devicePixelRatio;
-  const W = hudCanvas.width, H = hudCanvas.height;
-
-  const destX = targetPos.active ? targetPos.x : window.innerWidth/2;
-  const destY = targetPos.active ? targetPos.y : window.innerHeight/2;
-  currentPos.x += (destX - currentPos.x) * 0.12;
-  currentPos.y += (destY - currentPos.y) * 0.12;
-
-  lockFactor = isLocked
-    ? Math.min(1, lockFactor + 0.08)
-    : Math.max(0, lockFactor - 0.04);
-
-  pulseTime += 0.05;
-  scanAngle += 0.02;
-
-  const tier = primaryTarget ? getThreat(primaryTarget.class.toLowerCase()) : null;
-  let rr = 200, rg = 220, rb = 255;
-  if (isLocked) {
-    if (tier === 'HIGH')       { rr=255; rg=20;  rb=20;  }
-    else if (tier === 'MED')   { rr=255; rg=140; rb=0;   }
-    else                       { rr=255; rg=220; rb=50;  }
-  }
-  const alpha = 0.6 + 0.4 * lockFactor;
-  const mainColor = `rgba(${rr},${rg},${rb},${alpha})`;
-
-  // EW
-  ewTimer++;
-  if (ewTimer % 220 === 0) ewIntensity = 20;
-  if (ewIntensity > 0) {
-    ewIntensity = Math.max(0, ewIntensity - 0.7);
-    document.getElementById('ewAlert').classList.add('show');
-    document.getElementById('ewBar').style.width = (ewIntensity/20*100)+'%';
-    document.getElementById('ewBar').classList.add('danger');
-  } else {
-    document.getElementById('ewAlert').classList.remove('show');
-    document.getElementById('ewBar').style.width = '0%';
-    document.getElementById('ewBar').classList.remove('danger');
-  }
-
-  hCtx.save();
-
-  if (glitchActive > 0) {
-    hCtx.translate((Math.random()-0.5)*12*dpr, (Math.random()-0.5)*6*dpr);
-    glitchActive--;
-  }
-  if (ewIntensity > 5) {
-    hCtx.translate((Math.random()-0.5)*8*dpr*(ewIntensity/20), 0);
-  }
-
-  hCtx.strokeStyle = mainColor;
-  hCtx.fillStyle   = mainColor;
-  hCtx.shadowBlur  = 8 + 12*lockFactor;
-  hCtx.shadowColor = mainColor;
-
-  const cx = currentPos.x * dpr;
-  const cy = currentPos.y * dpr;
-
-  // Secondary detections
-  if (allPredictions.length > 1) {
-    hCtx.save();
-    hCtx.shadowBlur = 3;
-    for (let i = 1; i < allPredictions.length; i++) {
-      const p = allPredictions[i];
-      const [bx,by,bw,bh] = p.bbox;
-      const sX = window.innerWidth/(video.videoWidth||1);
-      const sY = window.innerHeight/(video.videoHeight||1);
-      const rx=bx*sX*dpr, ry=by*sY*dpr, rw=bw*sX*dpr, rh=bh*sY*dpr;
-      const t = getThreat(p.class.toLowerCase());
-      hCtx.strokeStyle = t==='HIGH' ? 'rgba(255,80,80,0.4)'
-                       : t==='MED'  ? 'rgba(255,160,0,0.35)'
-                                    : 'rgba(200,200,255,0.25)';
-      hCtx.shadowColor = hCtx.strokeStyle;
-      hCtx.lineWidth = 1*dpr;
-      hCtx.setLineDash([4*dpr,4*dpr]);
-      hCtx.strokeRect(rx,ry,rw,rh);
-      hCtx.setLineDash([]);
-      hCtx.fillStyle = hCtx.strokeStyle;
-      hCtx.font = `${9*dpr}px 'Share Tech Mono'`;
-      hCtx.fillText(p.class.toUpperCase(), rx+4*dpr, ry-4*dpr);
-    }
-    hCtx.restore();
-  }
-
-  // Primary target bounding box
-  if (primaryTarget && targetPos.active) {
-    const p = primaryTarget;
-    const [bx,by,bw,bh] = p.bbox;
-    const sX = window.innerWidth/(video.videoWidth||1);
-    const sY = window.innerHeight/(video.videoHeight||1);
-    const rx=bx*sX*dpr, ry=by*sY*dpr, rw=bw*sX*dpr, rh=bh*sY*dpr;
-    hCtx.save();
-    hCtx.strokeStyle = mainColor;
-    hCtx.shadowColor = mainColor;
-    hCtx.lineWidth   = 1.5*dpr;
-    hCtx.shadowBlur  = 10*lockFactor;
-    const cLen = Math.min(rw,rh)*0.22;
-    hCtx.beginPath();
-    hCtx.moveTo(rx, ry+cLen); hCtx.lineTo(rx, ry); hCtx.lineTo(rx+cLen, ry);
-    hCtx.moveTo(rx+rw-cLen, ry); hCtx.lineTo(rx+rw, ry); hCtx.lineTo(rx+rw, ry+cLen);
-    hCtx.moveTo(rx+rw, ry+rh-cLen); hCtx.lineTo(rx+rw, ry+rh); hCtx.lineTo(rx+rw-cLen, ry+rh);
-    hCtx.moveTo(rx+cLen, ry+rh); hCtx.lineTo(rx, ry+rh); hCtx.lineTo(rx, ry+rh-cLen);
-    hCtx.stroke();
-    hCtx.fillStyle = `rgba(${rr},${rg},${rb},${0.03+0.04*lockFactor})`;
-    hCtx.fillRect(rx,ry,rw,rh);
-    if (lockFactor > 0.4) {
-      hCtx.setLineDash([3*dpr,5*dpr]);
-      hCtx.lineWidth = 0.5*dpr;
-      hCtx.strokeStyle = `rgba(${rr},${rg},${rb},0.3)`;
-      hCtx.beginPath();
-      hCtx.moveTo(rx-20*dpr, ry); hCtx.lineTo(rx-20*dpr, ry+rh);
-      hCtx.moveTo(rx, ry-12*dpr); hCtx.lineTo(rx+rw, ry-12*dpr);
-      hCtx.stroke();
-      hCtx.setLineDash([]);
-      hCtx.fillStyle = `rgba(${rr},${rg},${rb},0.5)`;
-      hCtx.font = `${8*dpr}px 'Share Tech Mono'`;
-      hCtx.fillText(`${Math.round(rh/dpr)}px`, rx-18*dpr, ry+rh/2, 16*dpr);
-      hCtx.fillText(`${Math.round(rw/dpr)}px`, rx+rw/2-12*dpr, ry-14*dpr);
-    }
-    hCtx.restore();
-  }
-
-  hCtx.strokeStyle = mainColor;
-  hCtx.fillStyle   = mainColor;
-  hCtx.shadowColor = mainColor;
-  hCtx.shadowBlur  = 8 + 14*lockFactor;
-
-  drawReticle(cx, cy, dpr, lockFactor, mainColor, rr, rg, rb);
-
-  if (lockFactor > 0.05) {
-    hCtx.globalAlpha = lockFactor;
-    drawDataBlock(cx, cy, dpr, mainColor);
-    hCtx.globalAlpha = 1;
-  }
-
-  // EW noise
-  if (ewIntensity > 3) {
-    const n = Math.round(ewIntensity * 0.8);
-    for (let i=0;i<n;i++) {
-      hCtx.fillStyle = `rgba(255,255,255,${Math.random()*0.15})`;
-      hCtx.fillRect(Math.random()*W, Math.random()*H, (1+Math.random()*2)*dpr, dpr);
-    }
-    for (let i=0;i<3;i++) {
-      const hy = Math.random()*H;
-      hCtx.fillStyle = `rgba(255,255,255,${Math.random()*0.08})`;
-      hCtx.fillRect(0, hy, W, (0.5+Math.random())*dpr);
-    }
-  }
-
-  drawCornerDeco(W, H, dpr);
-  hCtx.restore();
-  requestAnimationFrame(drawHUD);
-}
-
-/* ── RETICLE ── */
-function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb) {
-  hCtx.save();
-  hCtx.translate(cx, cy);
-
-  hCtx.strokeStyle = `rgba(${rr},${rg},${rb},0.2)`;
-  hCtx.lineWidth   = 0.5*dpr;
-  hCtx.shadowBlur  = 0;
-  hCtx.beginPath(); hCtx.arc(0,0,110*dpr,0,Math.PI*2); hCtx.stroke();
-
-  if (lf > 0.1) {
-    const pulse = 0.5+0.5*Math.sin(pulseTime*2);
-    hCtx.strokeStyle = `rgba(${rr},${rg},${rb},${0.08+0.1*pulse*lf})`;
-    hCtx.lineWidth   = 0.5*dpr;
-    for (const r of [60,80,100]) {
-      hCtx.beginPath(); hCtx.arc(0,0,r*dpr,0,Math.PI*2); hCtx.stroke();
-    }
-  }
-
-  if (lf > 0.15) {
-    hCtx.save();
-    hCtx.rotate(pulseTime*1.5);
-    hCtx.strokeStyle = `rgba(${rr},${rg},${rb},${0.3+0.3*lf})`;
-    hCtx.lineWidth   = 1.5*dpr; hCtx.shadowBlur = 6*lf; hCtx.shadowColor = mainColor;
-    hCtx.setLineDash([18*dpr,50*dpr]);
-    hCtx.beginPath(); hCtx.arc(0,0,95*dpr,0,Math.PI*2); hCtx.stroke();
-    hCtx.restore();
-  }
-  if (lf > 0.3) {
-    hCtx.save();
-    hCtx.rotate(-pulseTime*0.8);
-    hCtx.strokeStyle = `rgba(${rr},${rg},${rb},${0.15+0.15*lf})`;
-    hCtx.lineWidth   = 0.8*dpr;
-    hCtx.setLineDash([6*dpr,20*dpr]);
-    hCtx.beginPath(); hCtx.arc(0,0,75*dpr,0,Math.PI*2); hCtx.stroke();
-    hCtx.restore();
-  }
-  hCtx.setLineDash([]);
-
-  const bracketSize  = (28-8*lf)*dpr;
-  const bracketDepth = (8+14*lf)*dpr;
-  hCtx.strokeStyle = mainColor; hCtx.lineWidth = 2.5*dpr;
-  hCtx.shadowBlur  = 10*lf;   hCtx.shadowColor = mainColor;
-  for (let i=0;i<4;i++) {
-    hCtx.save(); hCtx.rotate(i*Math.PI/2);
-    hCtx.beginPath();
-    hCtx.moveTo(bracketSize, -bracketSize+bracketDepth);
-    hCtx.lineTo(bracketSize, -bracketSize);
-    hCtx.lineTo(bracketSize-bracketDepth, -bracketSize);
-    hCtx.stroke(); hCtx.restore();
-  }
-
-  hCtx.lineWidth = 1.5*dpr; hCtx.shadowBlur = 6;
-  const c=7*dpr, gap=4*dpr;
-  hCtx.beginPath();
-  hCtx.moveTo(-c,0); hCtx.lineTo(-gap,0);
-  hCtx.moveTo(gap,0); hCtx.lineTo(c,0);
-  hCtx.moveTo(0,-c); hCtx.lineTo(0,-gap);
-  hCtx.moveTo(0,gap); hCtx.lineTo(0,c);
-  hCtx.stroke();
-
-  hCtx.shadowBlur = 12*lf;
-  hCtx.beginPath(); hCtx.arc(0,0,2.5*dpr,0,Math.PI*2); hCtx.fill();
-
-  hCtx.strokeStyle = `rgba(${rr},${rg},${rb},0.5)`;
-  hCtx.lineWidth   = 1*dpr; hCtx.shadowBlur = 0;
-  for (let a=0;a<360;a+=15) {
-    const rad=a*Math.PI/180;
-    const inner=a%90===0?115*dpr:a%45===0?112*dpr:110.5*dpr;
-    hCtx.beginPath();
-    hCtx.moveTo(Math.cos(rad)*inner, Math.sin(rad)*inner);
-    hCtx.lineTo(Math.cos(rad)*118*dpr, Math.sin(rad)*118*dpr);
-    hCtx.stroke();
-  }
-
-  if (lf > 0.5) {
-    const burst=(lf-0.5)*2;
-    hCtx.strokeStyle = `rgba(${rr},${rg},${rb},${0.15*burst})`;
-    hCtx.lineWidth   = 0.5*dpr;
-    for (let a=0;a<360;a+=30) {
-      const rad=a*Math.PI/180;
-      hCtx.beginPath();
-      hCtx.moveTo(Math.cos(rad)*120*dpr, Math.sin(rad)*120*dpr);
-      hCtx.lineTo(Math.cos(rad)*(120+30*burst)*dpr, Math.sin(rad)*(120+30*burst)*dpr);
-      hCtx.stroke();
-    }
-  }
-
-  if (lf < 0.8) {
-    hCtx.save(); hCtx.rotate(scanAngle);
-    const sg = hCtx.createLinearGradient(0,-100*dpr,0,0);
-    sg.addColorStop(0,`rgba(${rr},${rg},${rb},0.0)`);
-    sg.addColorStop(1,`rgba(${rr},${rg},${rb},${0.08*(1-lf)})`);
-    hCtx.fillStyle = sg;
-    hCtx.beginPath(); hCtx.moveTo(0,0); hCtx.arc(0,0,108*dpr,-0.5,0.5); hCtx.closePath();
-    hCtx.fill(); hCtx.restore();
-  }
-
-  hCtx.restore();
-}
-
-function drawDataBlock(cx, cy, dpr, mainColor) {
-  textTick += 0.6;
-  const fs = 11*dpr;
-  hCtx.font = `${fs}px 'Share Tech Mono'`;
-  hCtx.shadowBlur = 4; hCtx.shadowColor = mainColor;
-  infoLines.forEach((l,i) => {
-    const chars = Math.floor(textTick - i*4);
-    if (chars <= 0) return;
-    let line = (l.k+': '+l.v).substring(0, chars);
-    if (ewIntensity > 8 && Math.random() > 0.6) {
-      line = line.replace(/[A-Z0-9]/g, c => Math.random()>0.6 ? String.fromCharCode(33+Math.random()*20) : c);
-    }
-    hCtx.fillText('› '+line, cx+120*dpr, cy-30*dpr+i*fs*1.6);
-  });
-  if (Math.random() > 0.85) {
-    hCtx.globalAlpha = 0.3;
-    hCtx.fillRect(cx+115*dpr, cy+40*dpr, Math.random()*50*dpr, 1.5*dpr);
-    hCtx.globalAlpha = 1;
-  }
-}
-
-function drawCornerDeco(W, H, dpr) {
-  const s=30*dpr, t=1*dpr;
-  hCtx.strokeStyle = 'rgba(255,255,255,0.12)';
-  hCtx.lineWidth   = t; hCtx.shadowBlur = 0; hCtx.setLineDash([]);
-  const corners = [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]];
-  for (const [x,y,sx,sy] of corners) {
-    hCtx.beginPath();
-    hCtx.moveTo(x+sx*s,y); hCtx.lineTo(x,y); hCtx.lineTo(x,y+sy*s);
-    hCtx.stroke();
-  }
-  hCtx.strokeStyle = 'rgba(255,255,255,0.06)';
-  hCtx.lineWidth   = 0.5*dpr;
-  hCtx.setLineDash([5*dpr,15*dpr]);
-  hCtx.beginPath();
-  hCtx.moveTo(0,H/2); hCtx.lineTo(W,H/2);
-  hCtx.moveTo(W/2,0); hCtx.lineTo(W/2,H);
-  hCtx.stroke(); hCtx.setLineDash([]);
-}
-
-/* ═══════════════════════════════════════════════════
-   MEDIAPIPE FACE MESH
-═══════════════════════════════════════════════════ */
-function mpx(lmX, W) { return mirrorX ? (1-lmX)*W : lmX*W; }
-function mpy(lmY, H) { return lmY*H; }
-
+/* --- FACE MESH --- */
 function initFaceMesh() {
-  faceMeshModel = new FaceMesh({
-    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
-  });
-  faceMeshModel.setOptions({
-    maxNumFaces: 1,
-    refineLandmarks: true,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-  });
-  faceMeshModel.onResults(onFaceResults);
+  faceMeshModel = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+  faceMeshModel.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
+  faceMeshModel.onResults(results => {
+    fCtx.save();
+    fCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+    
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+      document.getElementById('faceStat').textContent = 'LOCKED';
+      const lm = results.multiFaceLandmarks[0];
+      
+      // Наложение сетки (Tesselation)
+      fCtx.strokeStyle = isSpeaking ? '#00ff88' : '#00f5ff';
+      fCtx.lineWidth = 0.5;
+      fCtx.globalAlpha = 0.4;
+      fCtx.beginPath();
+      FACEMESH_TESSELATION.forEach(edge => {
+        const a = lm[edge[0]], b = lm[edge[1]];
+        fCtx.moveTo((1-a.x) * faceCanvas.width, a.y * faceCanvas.height);
+        fCtx.lineTo((1-b.x) * faceCanvas.width, b.y * faceCanvas.height);
+      });
+      fCtx.stroke();
 
-  // Use Camera utility on the faceVideo element
-  camInstance = new Camera(faceVideo, {
-    onFrame: async () => {
-      if (faceVideo.readyState >= 2) await faceMeshModel.send({ image: faceVideo });
-    },
-    facingMode: facingMode,
+      // Биометрические точки
+      fCtx.globalAlpha = 1;
+      fCtx.fillStyle = '#00f5ff';
+      [1, 4, 152, 33, 263].forEach(i => {
+        const p = lm[i];
+        fCtx.beginPath();
+        fCtx.arc((1-p.x) * faceCanvas.width, p.y * faceCanvas.height, 2, 0, Math.PI*2);
+        fCtx.fill();
+      });
+    } else {
+      document.getElementById('faceStat').textContent = 'SCAN';
+    }
+    fCtx.restore();
+  });
+
+  const cam = new Camera(faceVideo, {
+    onFrame: async () => { await faceMeshModel.send({image: faceVideo}); },
     width: 1280, height: 720
   });
-  camInstance.start();
+  cam.start();
 }
 
-function onFaceResults(results) {
-  faceFrameCount++;
-  const now = performance.now();
-  if (now - lastFpsFaceTime >= 1000) {
-    lastFpsFaceTime = now; faceFrameCount = 0;
-  }
-
-  const W = faceVideo.videoWidth  || faceCanvas.clientWidth  || window.innerWidth;
-  const H = faceVideo.videoHeight || faceCanvas.clientHeight || window.innerHeight;
-  if (faceCanvas.width  !== W) faceCanvas.width  = W;
-  if (faceCanvas.height !== H) faceCanvas.height = H;
-
-  fCtx.save();
-  fCtx.clearRect(0,0,W,H);
-
-  // Minimal dim ghost of video (for reference)
-  fCtx.globalAlpha = 0.0; // invisible — video element handles display
-  fCtx.drawImage(results.image,0,0,W,H);
-  fCtx.globalAlpha = 1;
-
-  const faces    = results.multiFaceLandmarks;
-  const hasFace  = !!(faces && faces.length > 0);
-
-  document.getElementById('faceStat').textContent = hasFace ? 'LOCKED' : 'SCANNING';
-
-  if (hasFace) {
-    if (!prevFaceTarget) {
-      document.getElementById('face-target-label').classList.add('visible');
-      document.getElementById('faceMetrics').classList.add('visible');
-      document.getElementById('acquired-flash').classList.remove('flash');
-      void document.getElementById('acquired-flash').offsetWidth;
-      document.getElementById('acquired-flash').classList.add('flash');
-      typeDone=false; typeIdx=0; typeCharIdx=0;
-      typeLines=['','',''];
-      typeTargets=[
-        'ID: '+Math.floor(Math.random()*9000+1000).toString(16).toUpperCase(),
-        'CONF: '+(88+Math.floor(Math.random()*12))+'%',
-        'SCAN: ACTIVE'
-      ];
-      if (!acquiredLogged) { addInstantLog('BIOMETRIC TARGET ACQUIRED', 'speech'); acquiredLogged=true; }
-    }
-
-    for (let fi=0; fi<faces.length; fi++) {
-      const lm = faces[fi];
-      const ld = Math.hypot(lm[159].x-lm[145].x, lm[159].y-lm[145].y);
-      const rd = Math.hypot(lm[386].x-lm[374].x, lm[386].y-lm[374].y);
-      const eyesClosed = ld < 0.015 && rd < 0.015;
-      const color = isSpeaking ? '#00ff88' : (eyesClosed ? '#ff2244' : '#00f5ff');
-
-      drawFaceTesselation(lm, W, H, color);
-      drawFaceOval(lm, W, H, color);
-      drawFaceEyes(lm, W, H, color);
-      drawFaceMouth(lm, W, H, color);
-      drawFaceIris(lm, W, H, color);
-      drawFaceKeyDots(lm, W, H, color);
-      updateFaceInfoOverlay(lm, W, H, now);
-
-      // Symmetry metric
-      const symm = Math.abs(lm[234].x - (1-lm[454].x));
-      const symmPct = Math.max(0, Math.min(100, Math.round((1-symm*10)*100)));
-      document.getElementById('m-symmetry').style.width  = symmPct+'%';
-      document.getElementById('mv-symmetry').textContent = symmPct+'%';
-      document.getElementById('symmBar').style.width     = symmPct+'%';
-      const conf = 88+Math.floor(Math.random()*4);
-      document.getElementById('m-conf').style.width  = conf+'%';
-      document.getElementById('mv-conf').textContent = conf+'%';
-    }
-  } else {
-    if (prevFaceTarget) {
-      document.getElementById('face-target-label').classList.remove('visible');
-      document.getElementById('faceMetrics').classList.remove('visible');
-      clearFaceInfoOverlay();
-      addInstantLog('BIOMETRIC LOST -- RESUMING SCAN', 'info');
-      acquiredLogged = false;
-      document.getElementById('symmBar').style.width = '0%';
-      document.getElementById('m-symmetry').style.width = '0%';
-      document.getElementById('mv-symmetry').textContent = '--';
-      document.getElementById('m-conf').style.width  = '0%';
-      document.getElementById('mv-conf').textContent = '--';
-    }
-  }
-
-  prevFaceTarget = hasFace;
-  fCtx.restore();
-}
-
-function drawFaceTesselation(lm, W, H, color) {
-  fCtx.save();
-  fCtx.globalAlpha = 0.18;
-  fCtx.strokeStyle = color;
-  fCtx.lineWidth   = 0.4;
-  fCtx.beginPath();
-  const tess = FACEMESH_TESSELATION;
-  for (let i=0;i<tess.length;i++) {
-    const a=lm[tess[i][0]], b=lm[tess[i][1]];
-    if (!a||!b) continue;
-    fCtx.moveTo(mpx(a.x,W), mpy(a.y,H));
-    fCtx.lineTo(mpx(b.x,W), mpy(b.y,H));
-  }
-  fCtx.stroke(); fCtx.restore();
-}
-
-function drawFaceLandmarkContour(lm, indices, W, H, color, lw, alpha, close) {
-  fCtx.save();
-  fCtx.globalAlpha = alpha;
-  fCtx.strokeStyle = color;
-  fCtx.lineWidth   = lw;
-  fCtx.shadowColor = color; fCtx.shadowBlur = 5;
-  fCtx.beginPath();
-  let started=false;
-  for (let i=0;i<indices.length;i++) {
-    const p=lm[indices[i]]; if (!p) continue;
-    if (!started) { fCtx.moveTo(mpx(p.x,W),mpy(p.y,H)); started=true; }
-    else            fCtx.lineTo(mpx(p.x,W),mpy(p.y,H));
-  }
-  if (close) fCtx.closePath();
-  fCtx.stroke(); fCtx.restore();
-}
-
-function drawFaceOval(lm, W, H, color) {
-  const oval=[10,338,297,332,284,251,389,356,454,323,361,288,
-              397,365,379,378,400,377,152,148,176,149,150,136,
-              172,58,132,93,234,127,162,21,54,103,67,109,10];
-  drawFaceLandmarkContour(lm,oval,W,H,color,1.2,0.5,false);
-}
-
-function drawFaceEyes(lm, W, H, color) {
-  const rEye=[33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246,33];
-  const lEye=[263,249,390,373,374,380,381,382,362,398,384,385,386,387,388,466,263];
-  const rBrow=[70,63,105,66,107,55,65,52,53,46];
-  const lBrow=[300,293,334,296,336,285,295,282,283,276];
-  drawFaceLandmarkContour(lm,rEye, W,H,color,1.3,0.9,false);
-  drawFaceLandmarkContour(lm,lEye, W,H,color,1.3,0.9,false);
-  drawFaceLandmarkContour(lm,rBrow,W,H,color,1.0,0.6,false);
-  drawFaceLandmarkContour(lm,lBrow,W,H,color,1.0,0.6,false);
-}
-
-function drawFaceMouth(lm, W, H, color) {
-  const outerTop   =[61,185,40,39,37,0,267,269,270,409,291];
-  const outerBottom=[291,375,321,405,314,17,84,181,91,146,61];
-  const innerTop   =[78,191,80,81,82,13,312,311,310,415,308];
-  const innerBottom=[308,324,318,402,317,14,87,178,88,95,78];
-  drawFaceLandmarkContour(lm,outerTop,   W,H,color,1.4,0.9,false);
-  drawFaceLandmarkContour(lm,outerBottom,W,H,color,1.4,0.9,false);
-  drawFaceLandmarkContour(lm,innerTop,   W,H,color,1.0,0.6,false);
-  drawFaceLandmarkContour(lm,innerBottom,W,H,color,1.0,0.6,false);
-}
-
-function drawFaceIris(lm, W, H, color) {
-  [[469,470,471,472],[474,475,476,477]].forEach(ring => {
-    fCtx.save();
-    fCtx.globalAlpha = 0.75;
-    fCtx.strokeStyle = color; fCtx.lineWidth = 1.3;
-    fCtx.shadowColor = color; fCtx.shadowBlur = 8;
-    fCtx.beginPath();
-    for (let i=0;i<=ring.length;i++) {
-      const p=lm[ring[i%ring.length]]; if (!p) continue;
-      if (i===0) fCtx.moveTo(mpx(p.x,W),mpy(p.y,H));
-      else       fCtx.lineTo(mpx(p.x,W),mpy(p.y,H));
-    }
-    fCtx.closePath(); fCtx.stroke(); fCtx.restore();
-  });
-}
-
-function drawFaceKeyDots(lm, W, H, color) {
-  fCtx.save();
-  fCtx.fillStyle=color; fCtx.shadowColor=color; fCtx.shadowBlur=6;
-  [1,4,6,10,152,234,454,33,263,61,291].forEach(idx => {
-    const p=lm[idx]; if (!p) return;
-    fCtx.beginPath(); fCtx.arc(mpx(p.x,W),mpy(p.y,H),1.8,0,Math.PI*2); fCtx.fill();
-  });
-  fCtx.restore();
-}
-
-/* ── FACE INFO OVERLAY ── */
-function updateFaceInfoOverlay(lm, W, H, now) {
-  const topPt = lm[10];
-  const foreX = mpx(topPt.x, W);
-  // Scale to screen coordinates
-  const scaleX = window.innerWidth  / W;
-  const scaleY = window.innerHeight / H;
-  const screenX = foreX * scaleX;
-  const screenY = mpy(topPt.y, H) * scaleY - 22;
-  const fi = document.getElementById('face-info');
-  fi.style.left = screenX+'px';
-  fi.style.top  = Math.max(screenY, 4)+'px';
-  fi.classList.add('visible');
-
-  if (!typeDone && now > typeTimer) {
-    typeTimer = now+45;
-    if (typeIdx < typeTargets.length) {
-      if (typeCharIdx < typeTargets[typeIdx].length) {
-        typeLines[typeIdx] += typeTargets[typeIdx][typeCharIdx++];
-      } else {
-        typeIdx++; typeCharIdx=0;
-        if (typeIdx >= typeTargets.length) typeDone=true;
-      }
-    }
-  }
-  const glitch = frameGlitch && now < frameGlitchEnd;
-  const sfx = glitch ? (Math.random()>0.5?'_':' ') : '';
-  document.getElementById('fi-0').textContent = typeLines[0]+(typeIdx===0?'_':'');
-  document.getElementById('fi-1').textContent = typeLines[1]+(typeIdx===1?'_':'');
-  document.getElementById('fi-2').textContent = typeLines[2]+(typeIdx===2?'_':'')+sfx;
-}
-
-function clearFaceInfoOverlay() {
-  document.getElementById('face-info').classList.remove('visible');
-  typeDone=false; typeIdx=0; typeCharIdx=0;
-  typeLines=['','','']; typeTimer=0;
-}
-
-function triggerGlitch() {
-  frameGlitch=true;
-  frameGlitchEnd=performance.now()+200+Math.random()*300;
-  const fi=document.getElementById('face-info');
-  fi.classList.add('glitch');
-  setTimeout(()=>{ frameGlitch=false; fi.classList.remove('glitch'); }, 500);
-}
-setInterval(triggerGlitch, 3000+Math.random()*4000);
-
-/* ═══════════════════════════════════════════════════
-   AUDIO VISUALIZER
-═══════════════════════════════════════════════════ */
-let eqRunning = false;
-function startEQ() {
-  if (eqRunning) return;
-  eqRunning = true;
-  const vizCanvas = document.getElementById('audioVisualizer');
-  const vCtx = vizCanvas.getContext('2d');
-  const ro = new ResizeObserver(() => {
-    const w=vizCanvas.offsetWidth, h=vizCanvas.offsetHeight;
-    if (w>0&&h>0) { vizCanvas.width=w; vizCanvas.height=h; }
-  });
-  ro.observe(vizCanvas);
-  (function loop() {
-    const mw=vizCanvas.offsetWidth||vizCanvas.width||400;
-    const mh=vizCanvas.offsetHeight||vizCanvas.height||40;
-    if (vizCanvas.width!==mw) vizCanvas.width=mw;
-    if (vizCanvas.height!==mh) vizCanvas.height=mh;
-    drawEQ(vCtx, vizCanvas.width, vizCanvas.height);
-    requestAnimationFrame(loop);
-  })();
-}
-
-function drawEQ(vCtx, W, H) {
-  if (!analyser||!freqData) {
-    vCtx.clearRect(0,0,W,H);
-    vCtx.strokeStyle='rgba(0,245,255,0.15)'; vCtx.lineWidth=1;
-    vCtx.beginPath(); vCtx.moveTo(0,H/2); vCtx.lineTo(W,H/2); vCtx.stroke();
-    return;
-  }
-  analyser.getByteFrequencyData(freqData);
-  vCtx.clearRect(0,0,W,H);
-  const N=freqData.length, barW=W/N, gap=Math.max(barW*0.12,0.8);
-  for (let i=0;i<N;i++) {
-    const v=freqData[i]/255;
-    const barH=Math.max(v*H,1.5);
-    const g=Math.floor(200+v*55), b=Math.floor(255*(1-v*0.3)), a=0.3+v*0.7;
-    vCtx.fillStyle=`rgba(0,${g},${b},${a})`;
-    vCtx.fillRect(i*barW, H-barH, barW-gap, barH);
-    vCtx.fillStyle=`rgba(0,${g},${b},${a*0.25})`;
-    vCtx.fillRect(i*barW, 0, barW-gap, barH*0.4);
-  }
-}
-
-/* ═══════════════════════════════════════════════════
-   SPEECH RECOGNITION
-═══════════════════════════════════════════════════ */
-function detectLang() {
-  const nav=(navigator.languages&&navigator.languages[0])||navigator.language||'ru-RU';
-  return /^uk/i.test(nav)?'uk-UA':'ru-RU';
-}
-
-function updateLangBtn(lang) {
-  const isRU = lang==='ru-RU';
-  document.getElementById('langA').textContent = isRU?'RU':'UK';
-  document.getElementById('langB').textContent = isRU?'Switch: UK':'Switch: RU';
-}
-
+/* --- SPEECH --- */
 function initSpeech() {
-  _SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!_SR) { addInstantLog('SPEECH ENGINE: NOT SUPPORTED','info'); return; }
-  currentLang = detectLang();
-  updateLangBtn(currentLang);
-  startRecognition(currentLang);
-}
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = currentLang;
 
-function startRecognition(lang) {
-  if (recognition) {
-    recognition.onend=null; recognition.onerror=null;
-    try { recognition.abort(); } catch(_) {}
-    recognition=null;
-  }
-  recRestarting=false; currentLang=lang; updateLangBtn(lang);
-  recognition = new _SR();
-  recognition.continuous=true; recognition.interimResults=true; recognition.lang=lang;
   recognition.onresult = e => {
-    let interim='';
-    for (let i=e.resultIndex;i<e.results.length;i++) {
-      const t=e.results[i][0].transcript.trim();
-      if (e.results[i].isFinal && t) addInstantLog(t,'speech');
-      else interim=t;
+    let text = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) addLog(e.results[i][0].transcript, 'speech');
+      else text = e.results[i][0].transcript;
     }
-    if (interim) {
-      isSpeaking=true;
-      const lsb=document.getElementById('liveSpeechBox');
-      lsb.textContent=interim.toUpperCase();
-      lsb.classList.add('speaking');
-    }
-  };
-  recognition.onend = () => {
-    isSpeaking=false;
-    const lsb=document.getElementById('liveSpeechBox');
-    lsb.classList.remove('speaking');
-    lsb.textContent='IDLE';
-    if (!recRestarting) {
-      recRestarting=true;
-      const sl=currentLang;
-      setTimeout(()=>{ recRestarting=false; startRecognition(sl); }, 400);
+    const box = document.getElementById('liveSpeechBox');
+    if (text) {
+      box.textContent = text.toUpperCase();
+      box.classList.add('visible', 'speaking');
+      isSpeaking = true;
     }
   };
-  recognition.onerror = e => {
-    if (e.error==='not-allowed') addInstantLog('MIC ACCESS DENIED','threat');
-    else if (e.error!=='no-speech'&&e.error!=='aborted') console.warn(e.error);
-  };
-  try { recognition.start(); addInstantLog('SPEECH: '+lang.toUpperCase(),'info'); } catch(_){}
+  recognition.onend = () => { isSpeaking = false; recognition.start(); };
+  recognition.start();
 }
 
-/* ═══════════════════════════════════════════════════
-   HUD BUTTONS (lang, export, cam switch)
-═══════════════════════════════════════════════════ */
+/* --- MAIN HUD LOOP --- */
+function mainLoop() {
+  const dpr = window.devicePixelRatio;
+  if (hudCanvas.width !== window.innerWidth * dpr) {
+    hudCanvas.width = window.innerWidth * dpr;
+    hudCanvas.height = window.innerHeight * dpr;
+    faceCanvas.width = window.innerWidth;
+    faceCanvas.height = window.innerHeight;
+  }
+  
+  hCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+  
+  // Рисуем рамки COCO
+  allPredictions.forEach(p => {
+    const [x, y, w, h] = p.bbox;
+    const sx = hudCanvas.width / video.videoWidth;
+    const sy = hudCanvas.height / video.videoHeight;
+    
+    hCtx.strokeStyle = '#ff2020';
+    hCtx.lineWidth = 2;
+    hCtx.strokeRect(x*sx, y*sy, w*sx, h*sy);
+    hCtx.fillStyle = '#ff2020';
+    hCtx.font = "12px Share Tech Mono";
+    hCtx.fillText(p.class.toUpperCase(), x*sx, y*sy - 5);
+  });
+
+  // EQ Audio
+  if (analyser) {
+    analyser.getByteFrequencyData(freqData);
+    const vCanvas = document.getElementById('audioVisualizer');
+    const vCtx = vCanvas.getContext('2d');
+    vCtx.clearRect(0,0, vCanvas.width, vCanvas.height);
+    vCtx.fillStyle = '#00ff88';
+    for(let i=0; i<60; i++) {
+      const h = (freqData[i*2]/255) * vCanvas.height;
+      vCtx.fillRect(i*5, vCanvas.height - h, 3, h);
+    }
+  }
+
+  requestAnimationFrame(mainLoop);
+}
+
 document.getElementById('langBtn').onclick = () => {
-  if (!_SR) return;
-  recRestarting=true;
-  startRecognition(currentLang==='ru-RU'?'uk-UA':'ru-RU');
-  document.getElementById('langBtn').classList.toggle('lang-active');
+  currentLang = currentLang === 'ru-RU' ? 'uk-UA' : 'ru-RU';
+  document.getElementById('langBtn').textContent = currentLang === 'ru-RU' ? 'RU' : 'UK';
+  recognition.lang = currentLang;
+  addLog(`LANG SW: ${currentLang}`, 'info');
 };
-
-document.getElementById('exportBtn').onclick = () => {
-  if (!logHistory.length) { alert('LOG IS EMPTY'); return; }
-  const blob = new Blob(['myFIX NEURAL LOG\n================\n'+logHistory.join('\n')],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='myfix_log_'+Date.now()+'.txt'; a.click();
-  URL.revokeObjectURL(url);
-};
-
-document.getElementById('switchCamBtn').onclick = async () => {
-  facingMode = facingMode==='user'?'environment':'user';
-  mirrorX    = facingMode==='user';
-  document.getElementById('camA').textContent = facingMode==='user'?'Front':'Back';
-  document.getElementById('camB').textContent = facingMode==='user'?'Switch: Back':'Switch: Front';
-  if (camInstance) { try { await camInstance.stop(); } catch(_){} camInstance=null; }
-  // Switch faceVideo stream
-  const newStream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode, width:{ideal:1280}, height:{ideal:720} },
-    audio: true
-  });
-  if (activeStream) activeStream.getTracks().forEach(t=>t.stop());
-  activeStream=newStream;
-  video.srcObject=newStream;
-  faceVideo.srcObject=newStream;
-  // Reconnect audio
-  if (audioCtxNode) {
-    audioCtxNode.createMediaStreamSource(newStream).connect(analyser);
-  }
-  camInstance = new Camera(faceVideo, {
-    onFrame: async () => { if (faceVideo.readyState>=2) await faceMeshModel.send({image:faceVideo}); },
-    facingMode, width:1280, height:720
-  });
-  camInstance.start();
-  addInstantLog(`CAMERA: ${facingMode.toUpperCase()}`,'info');
-};
-
-/* ═══════════════════════════════════════════════════
-   CLEANUP
-═══════════════════════════════════════════════════ */
-window.addEventListener('beforeunload', () => {
-  if (activeStream) activeStream.getTracks().forEach(t=>t.stop());
-  if (audioCtxNode && audioCtxNode.state!=='closed') audioCtxNode.close().catch(()=>{});
-  if (recognition) { try { recognition.abort(); } catch(_){} }
-  if (camInstance) { try { camInstance.stop(); } catch(_){} }
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState==='hidden') {
-    if (recognition) try { recognition.abort(); } catch(_){}
-  } else if (document.visibilityState==='visible') {
-    if (_SR && !recRestarting) setTimeout(()=>startRecognition(currentLang), 300);
-  }
-});
 </script>
-
 </body>
 </html>
