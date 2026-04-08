@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>myFIX // NEURAL HUD</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Rajdhani:wght@300;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -19,7 +19,7 @@
   --dim:    rgba(255,255,255,0.08);
   --glow:   0 0 12px rgba(255,32,32,0.6);
   --mono:   'IBM Plex Mono', monospace;
-  --sans:   'Rajdhani', sans-serif;
+  --sans:   'IBM Plex Mono', monospace;
   --orb:    'Orbitron', monospace;
 }
 
@@ -115,12 +115,8 @@ body {
 }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* ── STATUS PANEL (right) ── */
-#statusPanel {
-  position: absolute; top: 50px; right: 15px;
-  width: 200px; z-index: 15;
-  display: flex; flex-direction: column; gap: 6px;
-}
+/* ── STATUS PANEL (removed) ── */
+#statusPanel { display: none !important; }
 .sp-row {
   display: flex; justify-content: space-between; align-items: center;
   border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -557,7 +553,7 @@ let ewTimer      = 0;
 let faceMeshModel    = null;
 let camInstance      = null;
 let facingMode       = 'user';
-let mirrorX          = true;
+let mirrorX          = false;  // MediaPipe Camera уже зеркалит координаты для фронтальной камеры
 let prevFaceTarget   = false;
 let acquiredLogged   = false;
 let isSpeaking       = false;
@@ -664,8 +660,8 @@ startBtn.onclick = async () => {
   startBtn.style.transition = 'opacity 0.5s';
   setTimeout(() => startBtn.style.display = 'none', 500);
 
-  document.getElementById('statusPanel').style.display = 'flex';
-  document.getElementById('botbar').style.display     = 'flex';
+  // statusPanel removed
+  document.getElementById('botbar').style.display = 'flex';
 
   await typeLog('BOOT SEQUENCE INITIATED', 'info');
   await typeLog('REQUESTING SENSOR ACCESS..', 'info');
@@ -935,7 +931,7 @@ function drawHUD() {
       hCtx.stroke();
       hCtx.setLineDash([]);
       hCtx.fillStyle = `rgba(${rr},${rg},${rb},0.5)`;
-      hCtx.font = `${8*dpr}px 'Share Tech Mono'`;
+      hCtx.font = `${8*dpr}px 'IBM Plex Mono'`;
       hCtx.fillText(`${Math.round(rh/dpr)}px`, rx-18*dpr, ry+rh/2, 16*dpr);
       hCtx.fillText(`${Math.round(rw/dpr)}px`, rx+rw/2-12*dpr, ry-14*dpr);
     }
@@ -1132,7 +1128,7 @@ function initFaceMesh() {
   });
   faceMeshModel.onResults(onFaceResults);
 
-  // Use Camera utility on the faceVideo element
+  // Use Camera utility on the faceVideo element — координаты MediaPipe совпадают с тем, что видит пользователь
   camInstance = new Camera(faceVideo, {
     onFrame: async () => {
       if (faceVideo.readyState >= 2) await faceMeshModel.send({ image: faceVideo });
@@ -1506,7 +1502,7 @@ document.getElementById('exportBtn').onclick = () => {
 
 document.getElementById('switchCamBtn').onclick = async () => {
   facingMode = facingMode==='user'?'environment':'user';
-  mirrorX    = facingMode==='user';
+  mirrorX    = false;  // MediaPipe всегда возвращает координаты без доп. зеркала
   document.getElementById('camA').textContent = facingMode==='user'?'Front':'Back';
   document.getElementById('camB').textContent = facingMode==='user'?'Switch: Back':'Switch: Front';
   if (camInstance) { try { await camInstance.stop(); } catch(_){} camInstance=null; }
