@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>myFIX</title>
+    <title>myFIX // TACTICAL</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,51 +56,28 @@
         background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
     }
 
-    /* ── TOP BAR ── */
-    #topbar {
-        position: absolute; top: 0; left: 0; right: 0; height: 36px;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 18px; z-index: 15; border-bottom: 1px solid rgba(255,255,255,0.07);
-    }
-    .tb-left, .tb-right { display: flex; gap: 20px; align-items: center; }
-    .tb-label {
-        font-family: var(--sans); font-size: 10px; font-weight: 700;
-        letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.4);
-    }
-    .tb-val {
-        font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.7);
-        letter-spacing: 1px;
-    }
-    #sysId { color: #fff; font-size: 11px; letter-spacing: 4px; font-family: var(--sans); font-weight: 700; }
-
     /* ── BOTTOM BAR ── */
-    #botbar {
-        position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
-        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 18px; z-index: 15; border-top: 1px solid rgba(255,255,255,0.07);
-    }
+    #botbar { display: none !important; }
     .coords { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; }
 
     /* ── TERMINAL ── */
     #terminal {
-        position: absolute; bottom: 50px; left: 15px;
-        width: 300px; max-height: 200px;
+        position: absolute; bottom: 20px; left: 15px;
+        width: 320px; max-height: 220px;
         overflow: hidden; z-index: 15;
     }
     .log-entry {
         font-size: 10px; letter-spacing: 1.5px; line-height: 1.8;
-        text-transform: uppercase; color: rgba(255,255,255,0.5);
+        text-transform: uppercase;
         display: flex; gap: 8px; align-items: baseline;
         animation: fadeIn 0.3s ease;
     }
-    .log-entry.threat { color: var(--red); }
-    .log-entry.info { color: rgba(255,255,255,0.6); }
+    .log-entry.threat { color: #ff2020; text-shadow: 0 0 6px rgba(255,32,32,0.5); }
+    .log-entry.info   { color: rgba(255,255,255,0.85); }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
 
-    .log-ts { color: rgba(255,255,255,0.2); flex-shrink: 0; }
-    .log-prefix { color: rgba(255,255,255,0.25); }
+    .log-ts { color: rgba(255,255,255,0.3); flex-shrink: 0; }
+    .log-prefix { color: rgba(255,255,255,0.35); }
 
     /* Cursor blink */
     #cursor {
@@ -111,34 +88,8 @@
     }
     @keyframes blink { 50% { opacity: 0; } }
 
-    /* ── STATUS PANEL (right) ── */
-    #statusPanel {
-        position: absolute; top: 50px; right: 15px;
-        width: 200px; z-index: 15;
-        display: flex; flex-direction: column; gap: 6px;
-    }
-    .sp-row {
-        display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-        padding-bottom: 4px;
-    }
-    .sp-key {
-        font-family: var(--sans); font-size: 9px; font-weight: 700;
-        letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.3);
-    }
-    .sp-val {
-        font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.65);
-        letter-spacing: 1px;
-    }
-    .sp-val.active { color: var(--red); text-shadow: 0 0 8px var(--red); }
-
-    /* ── BAR INDICATORS ── */
-    .bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.1); position: relative; }
-    .bar-fill {
-        height: 100%; background: rgba(255,255,255,0.5);
-        transition: width 0.3s ease;
-    }
-    .bar-fill.danger { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    /* ── STATUS PANEL — hidden ── */
+    #statusPanel { display: none !important; }
 
     /* ── START BUTTON ── */
     #startBtn {
@@ -163,15 +114,8 @@
     #startBtn:hover .btn-text { opacity: 1; }
     #startBtn:hover .ring-svg { animation-duration: 1.5s; }
 
-    /* ── COMPASS ── */
-    #compass {
-        position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-        z-index: 15; display: flex; align-items: center; gap: 2px;
-    }
-    .comp-tick { width: 1px; height: 8px; background: rgba(255,255,255,0.15); }
-    .comp-tick.major { height: 14px; background: rgba(255,255,255,0.35); }
-    .comp-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1px; padding: 0 3px; font-family: var(--sans); font-weight: 700; }
-    #compassN { color: var(--red) !important; }
+    /* ── COMPASS — hidden ── */
+    #compass { display: none !important; }
 
     /* ── THREAT BOX ── */
     #threatBox {
@@ -189,21 +133,16 @@
     .tbi { font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1px; line-height: 2; }
     .tbi-key { color: rgba(255,255,255,0.3); font-size: 9px; }
 
-    /* ── EW ALERT ── */
-    #ewAlert {
-        position: absolute; top: 50px; right: 220px;
-        font-family: var(--sans); font-size: 9px; font-weight: 700;
-        letter-spacing: 3px; color: var(--red);
-        opacity: 0; transition: opacity 0.2s;
-        z-index: 15; text-transform: uppercase;
-    }
-    #ewAlert.show { opacity: 1; }
+    /* ── EW ALERT — hidden ── */
+    #ewAlert { display: none !important; }
 </style>
+```
 
 </head>
 <body>
 <div id="container">
 
+```
 <!-- START SCREEN -->
 <button id="startBtn">
     <div class="btn-inner">
@@ -234,8 +173,8 @@
 <!-- TOP BAR -->
 <div id="topbar">
     <div class="tb-left">
-        <span class="tb-label"></span>
-        <span class="tb-val" id="sysId">myFIX</span>
+        <span class="tb-label">sys</span>
+        <span class="tb-val" id="sysId">myFIX // v2.1</span>
     </div>
     <div class="tb-left">
         <span class="tb-label">mode</span>
@@ -515,7 +454,8 @@ async function detectLoop() {
             document.getElementById('lockStat').textContent  = p.class.toUpperCase();
             document.getElementById('lockStat').className    = 'sp-val active';
             glitchActive = 12;
-            typeLog(`LOCK — ${p.class.toUpperCase()} [${getThreat(p.class.toLowerCase())}]`, 'threat');
+            const logClass = tier === 'HIGH' ? 'threat' : 'info';
+            typeLog(`LOCK — ${p.class.toUpperCase()} [${tier}]`, logClass);
         }
         if (!isLocked && wasLocked) {
             document.getElementById('threatBox').classList.remove('show');
