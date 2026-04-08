@@ -56,6 +56,33 @@
         background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
     }
 
+    /* ── TOP BAR ── */
+    #topbar {
+        position: absolute; top: 0; left: 0; right: 0; height: 36px;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 18px; z-index: 15; border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .tb-left, .tb-right { display: flex; gap: 20px; align-items: center; }
+    .tb-label {
+        font-family: var(--sans); font-size: 10px; font-weight: 700;
+        letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.4);
+    }
+    .tb-val {
+        font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.7);
+        letter-spacing: 1px;
+    }
+    #sysId { color: #fff; font-size: 11px; letter-spacing: 4px; font-family: var(--sans); font-weight: 700; }
+
+    /* ── BOTTOM BAR ── */
+    #botbar {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
+        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 18px; z-index: 15; border-top: 1px solid rgba(255,255,255,0.07);
+    }
+    .coords { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; }
+
     /* ── TERMINAL ── */
     #terminal {
         position: absolute; bottom: 50px; left: 15px;
@@ -84,6 +111,15 @@
     }
     @keyframes blink { 50% { opacity: 0; } }
 
+    
+    /* ── BAR INDICATORS ── */
+    .bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.1); position: relative; }
+    .bar-fill {
+        height: 100%; background: rgba(255,255,255,0.5);
+        transition: width 0.3s ease;
+    }
+    .bar-fill.danger { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
     /* ── START BUTTON ── */
     #startBtn {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -107,7 +143,17 @@
     #startBtn:hover .btn-text { opacity: 1; }
     #startBtn:hover .ring-svg { animation-duration: 1.5s; }
 
-     /* ── THREAT BOX ── */
+    /* ── COMPASS ── */
+    #compass {
+        position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+        z-index: 15; display: flex; align-items: center; gap: 2px;
+    }
+    .comp-tick { width: 1px; height: 8px; background: rgba(255,255,255,0.15); }
+    .comp-tick.major { height: 14px; background: rgba(255,255,255,0.35); }
+    .comp-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1px; padding: 0 3px; font-family: var(--sans); font-weight: 700; }
+    #compassN { color: var(--red) !important; }
+
+    /* ── THREAT BOX ── */
     #threatBox {
         position: absolute; top: 50%; right: 15px;
         transform: translateY(-50%);
