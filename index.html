@@ -14,87 +14,115 @@
   --red:#ff2020;
   --mono:'Share Tech Mono',monospace;
   --sans:'Rajdhani',sans-serif;
-  /* ── UNIFIED BUTTON TOKEN ── */
-  --btn-bg:rgba(0,0,0,0.72);
-  --btn-border:rgba(255,255,255,1);
+  --btn-bg:rgba(0,0,0,0.75);
+  --btn-border:#ffffff;
   --btn-color:#ffffff;
-  --btn-pad:6px 13px;
-  --btn-fs:9px;
-  --btn-ls:3px;
 }
-body{margin:0;background:#000;overflow:hidden;font-family:var(--mono);user-select:none;cursor:crosshair;
+body{margin:0;background:#000;overflow:hidden;font-family:var(--mono);
+  user-select:none;cursor:crosshair;
   -webkit-tap-highlight-color:transparent;touch-action:none}
 #container{position:relative;width:100vw;height:100vh}
-video{width:100%;height:100%;object-fit:cover;display:block;
-  filter:brightness(0.45) contrast(1.3) saturate(0.1) hue-rotate(180deg);
-  transform:translateZ(0);will-change:transform}
-#hudCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;
-  transform:translateZ(0);will-change:transform}
-#scanlines{position:absolute;inset:0;pointer-events:none;z-index:5;
-  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.16) 3px,rgba(0,0,0,0.16) 4px);
-  animation:scanScroll 8s linear infinite;transform:translateZ(0)}
+
+/* ── VIDEO hidden — WebGL reads it via texture ── */
+video{display:none}
+
+/* ── WEBGL canvas (background, full screen) ── */
+#glCanvas{
+position:absolute;top:0;left:0;width:100%;height:100%;
+z-index:1;transform:translateZ(0);will-change:transform;
+}
+
+/* ── HUD canvas (detections + reticle) ── */
+#hudCanvas{
+position:absolute;top:0;left:0;width:100%;height:100%;
+pointer-events:none;z-index:5;
+transform:translateZ(0);will-change:transform;
+}
+
+#scanlines{
+position:absolute;inset:0;pointer-events:none;z-index:6;
+background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.13) 3px,rgba(0,0,0,0.13) 4px);
+animation:scanScroll 8s linear infinite;transform:translateZ(0);
+}
 @keyframes scanScroll{from{background-position:0 0}to{background-position:0 100px}}
-#vignette{position:absolute;inset:0;pointer-events:none;z-index:4;
-  background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,rgba(0,0,0,0.78) 100%);
-  transform:translateZ(0)}
+
+#vignette{
+position:absolute;inset:0;pointer-events:none;z-index:4;
+background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,rgba(0,0,0,0.72) 100%);
+transform:translateZ(0);
+}
 
 /* ══════════════════════════════════════════
 UNIFIED BUTTON SYSTEM
-All HUD buttons share .hud-btn base class
 ══════════════════════════════════════════ */
 .hud-btn{
 background:var(–btn-bg);
 border:1px solid var(–btn-border);
 color:var(–btn-color);
-font-family:var(–sans);font-size:var(–btn-fs);font-weight:700;
-letter-spacing:var(–btn-ls);text-transform:uppercase;
-padding:var(–btn-pad);
+font-family:var(–sans);font-size:9px;font-weight:700;
+letter-spacing:3px;text-transform:uppercase;
+padding:7px 14px;
 cursor:pointer;outline:none;
 -webkit-tap-highlight-color:transparent;
-transition:background 0.15s, box-shadow 0.15s;
-white-space:nowrap;
+transition:background 0.15s,box-shadow 0.15s;
+white-space:nowrap;display:inline-block;
 }
 .hud-btn:hover,.hud-btn:active{
-background:rgba(255,255,255,0.08);
-box-shadow:0 0 10px rgba(255,255,255,0.15);
+background:rgba(255,255,255,0.1);
+box-shadow:0 0 10px rgba(255,255,255,0.2);
 }
-/* Active / armed state */
 .hud-btn.armed{
 border-color:var(–red);color:var(–red);
-box-shadow:0 0 10px rgba(255,32,32,0.4);
-animation:serisPulse 1s ease-in-out infinite;
+animation:btnArmed 1s ease-in-out infinite;
 }
-@keyframes serisPulse{0%,100%{box-shadow:0 0 8px rgba(255,32,32,0.3)}50%{box-shadow:0 0 18px rgba(255,32,32,0.7)}}
-/* Disabled state */
-.hud-btn:disabled{opacity:0.3;cursor:default}
+@keyframes btnArmed{0%,100%{box-shadow:0 0 6px rgba(255,32,32,0.3)}50%{box-shadow:0 0 16px rgba(255,32,32,0.7)}}
+.hud-btn:disabled{opacity:0.3;cursor:default;pointer-events:none}
 
-/* BOTTOM BAR */
-#botbar{position:absolute;bottom:0;left:0;right:0;height:36px;
-background:linear-gradient(to top,rgba(0,0,0,0.7),transparent);
+/* ── BOTTOM BAR ── */
+#botbar{
+position:absolute;bottom:0;left:0;right:0;height:36px;
+background:linear-gradient(to top,rgba(0,0,0,0.65),transparent);
 display:flex;align-items:center;justify-content:space-between;
-padding:0 18px;z-index:15;border-top:1px solid rgba(255,255,255,0.07)}
+padding:0 18px;z-index:15;border-top:1px solid rgba(255,255,255,0.07);
+}
 .coords{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px}
 
-/* TERMINAL */
-#terminal{position:absolute;bottom:44px;left:15px;width:300px;max-height:190px;
-overflow:hidden;z-index:15;pointer-events:none}
-.log-entry{font-size:10px;letter-spacing:1.5px;line-height:1.8;text-transform:uppercase;
-color:rgba(255,255,255,0.5);display:flex;gap:8px;align-items:baseline;animation:fadeIn 0.3s ease}
+/* ── TERMINAL ── */
+#terminal{
+position:absolute;bottom:44px;left:15px;
+width:300px;max-height:200px;overflow:hidden;
+z-index:15;pointer-events:none;
+}
+.log-entry{
+font-size:10px;letter-spacing:1.5px;line-height:1.8;
+text-transform:uppercase;color:rgba(255,255,255,0.5);
+display:flex;gap:8px;align-items:baseline;animation:fadeIn 0.3s ease;
+}
 .log-entry.threat{color:var(–red)}
 .log-entry.info{color:rgba(255,255,255,0.6)}
-.log-entry.voice{color:rgba(80,255,120,0.9)}   /* voice recognition — green */
-.log-entry.geo{color:rgba(80,200,255,0.9)}      /* gps — cyan */
-.log-entry.gyro{color:rgba(180,130,255,0.9)}    /* gyro — purple */
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
-.log-ts{color:rgba(255,255,255,0.2);flex-shrink:0}.log-prefix{color:rgba(255,255,255,0.25)}
-#cursor{display:inline-block;width:7px;height:12px;background:rgba(255,255,255,0.5);
-animation:blink 0.8s steps(1) infinite;vertical-align:middle;margin-left:2px}
+.log-entry.voice{color:rgba(80,255,120,0.9)}
+.log-entry.geo{color:rgba(80,200,255,0.9)}
+.log-entry.gyro{color:rgba(180,130,255,0.9)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1}}
+.log-ts{color:rgba(255,255,255,0.2);flex-shrink:0}
+.log-prefix{color:rgba(255,255,255,0.25)}
+#cursor{
+display:inline-block;width:7px;height:12px;
+background:rgba(255,255,255,0.5);
+animation:blink 0.8s steps(1) infinite;
+vertical-align:middle;margin-left:2px;
+}
 @keyframes blink{50%{opacity:0}}
 
-/* STATUS PANEL */
-#statusPanel{position:absolute;top:15px;right:15px;width:188px;z-index:15;display:flex;flex-direction:column;gap:5px}
-.sp-row{display:flex;justify-content:space-between;align-items:center;
-border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px}
+/* ── STATUS PANEL ── */
+#statusPanel{
+position:absolute;top:15px;right:15px;
+width:188px;z-index:15;display:flex;flex-direction:column;gap:5px;
+}
+.sp-row{
+display:flex;justify-content:space-between;align-items:center;
+border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;
+}
 .sp-key{font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3)}
 .sp-val{font-family:var(–mono);font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:1px}
 .sp-val.active{color:var(–red);text-shadow:0 0 8px var(–red)}
@@ -103,11 +131,35 @@ border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px}
 .bar-fill{height:100%;background:rgba(255,255,255,0.5);transition:width 0.3s}
 .bar-fill.danger{background:var(–red);box-shadow:0 0 6px var(–red)}
 
-/* START BUTTON — special large ring style, keeps base spirit */
-#startBtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-background:none;border:none;color:#fff;font-family:var(–sans);font-size:11px;font-weight:700;
-letter-spacing:5px;text-transform:uppercase;cursor:pointer;z-index:20;outline:none;padding:0;
--webkit-tap-highlight-color:transparent}
+/* ── SENSOR STRIP (top-center) ── */
+#sensorStrip{
+position:absolute;top:12px;left:50%;transform:translateX(-50%);
+z-index:15;display:none;flex-direction:row;gap:5px;align-items:center;
+}
+.sens-pill{
+background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.18);
+font-family:var(–mono);font-size:8px;letter-spacing:1px;
+color:rgba(255,255,255,0.45);padding:3px 8px;white-space:nowrap;
+}
+.sens-pill.ok{border-color:rgba(80,255,120,0.5);color:rgba(80,255,120,0.85)}
+.sens-pill.warn{border-color:rgba(255,200,0,0.5);color:rgba(255,200,0,0.85)}
+.sens-pill.err{border-color:rgba(255,32,32,0.5);color:rgba(255,32,32,0.7)}
+
+/* ── GYRO HORIZON ── */
+#gyroCanvas{
+position:absolute;top:40px;left:50%;transform:translateX(-50%);
+z-index:14;opacity:0.7;pointer-events:none;display:none;
+}
+
+/* ── START BUTTON ── */
+#startBtn{
+position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+background:none;border:none;color:#fff;
+font-family:var(–sans);font-size:11px;font-weight:700;
+letter-spacing:5px;text-transform:uppercase;
+cursor:pointer;z-index:20;outline:none;padding:0;
+-webkit-tap-highlight-color:transparent;
+}
 #startBtn .btn-inner{display:flex;flex-direction:column;align-items:center;gap:20px}
 #startBtn .btn-ring{width:80px;height:80px;position:relative;display:flex;align-items:center;justify-content:center}
 .ring-svg{position:absolute;inset:0;animation:spinRing 4s linear infinite}
@@ -117,28 +169,41 @@ letter-spacing:5px;text-transform:uppercase;cursor:pointer;z-index:20;outline:no
 #startBtn:hover .btn-text{opacity:1}
 #startBtn:hover .ring-svg{animation-duration:1.5s}
 
-/* EW ALERT */
-#ewAlert{position:absolute;top:15px;right:215px;font-family:var(–sans);font-size:9px;font-weight:700;
-letter-spacing:3px;color:var(–red);opacity:0;transition:opacity 0.2s;z-index:15;text-transform:uppercase}
+/* ── EW ALERT ── */
+#ewAlert{
+position:absolute;top:15px;right:215px;
+font-family:var(–sans);font-size:9px;font-weight:700;
+letter-spacing:3px;color:var(–red);
+opacity:0;transition:opacity 0.2s;z-index:15;text-transform:uppercase;
+}
 #ewAlert.show{opacity:1}
 
-/* THREAT BOX */
-#threatBox{position:absolute;top:50%;right:15px;transform:translateY(-50%);z-index:15;width:170px;opacity:0;transition:opacity 0.4s}
+/* ── THREAT BOX ── */
+#threatBox{
+position:absolute;top:50%;right:15px;transform:translateY(-50%);
+z-index:15;width:170px;opacity:0;transition:opacity 0.4s;
+}
 #threatBox.show{opacity:1}
-.tb-header{font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:3px;color:var(–red);
-border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:6px;margin-bottom:8px;text-transform:uppercase}
+.tb-header{
+font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:3px;color:var(–red);
+border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:6px;margin-bottom:8px;text-transform:uppercase;
+}
 .tbi{font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:1px;line-height:2}
 .tbi-key{color:rgba(255,255,255,0.3);font-size:9px}
 
 /* ══════════════════════════════════════════
 CAPTURE CARD
 ══════════════════════════════════════════ */
-#captureCard{position:absolute;top:14px;left:14px;z-index:20;display:flex;flex-direction:row;
+#captureCard{
+position:absolute;top:14px;left:14px;z-index:20;display:flex;
 opacity:0;pointer-events:none;transition:opacity 0.3s ease;
-filter:drop-shadow(0 0 8px rgba(255,32,32,0.35))}
+filter:drop-shadow(0 0 8px rgba(255,32,32,0.3));
+}
 #captureCard.show{opacity:1;pointer-events:auto}
-#portraitWrap{position:relative;width:130px;height:130px;flex-shrink:0;
-background:#000;border:1px solid rgba(255,32,32,0.5);overflow:hidden}
+#portraitWrap{
+position:relative;width:130px;height:130px;flex-shrink:0;
+background:#000;border:1px solid rgba(255,32,32,0.5);overflow:hidden;
+}
 #portraitCanvas{width:100%;height:100%;display:block;
 filter:brightness(1.1) contrast(1.25) saturate(0.12) hue-rotate(180deg)}
 .pcorner{position:absolute;width:9px;height:9px;border-color:var(–red);border-style:solid;z-index:2}
@@ -146,110 +211,206 @@ filter:brightness(1.1) contrast(1.25) saturate(0.12) hue-rotate(180deg)}
 .pcorner.tr{top:3px;right:3px;border-width:1.5px 1.5px 0 0}
 .pcorner.bl{bottom:3px;left:3px;border-width:0 0 1.5px 1.5px}
 .pcorner.br{bottom:3px;right:3px;border-width:0 1.5px 1.5px 0}
-#pScanlines{position:absolute;inset:0;pointer-events:none;z-index:3;
-background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.22) 2px,rgba(0,0,0,0.22) 3px)}
+#pScanlines{
+position:absolute;inset:0;pointer-events:none;z-index:3;
+background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.22) 2px,rgba(0,0,0,0.22) 3px);
+}
 #pCross{position:absolute;inset:0;z-index:4;pointer-events:none;display:flex;align-items:center;justify-content:center}
 #pCross::before{content:’’;width:16px;height:16px;border:1px solid rgba(255,32,32,0.5);border-radius:50%}
-#pStamp{position:absolute;bottom:4px;left:4px;right:4px;z-index:5;font-size:7px;font-family:var(–mono);
-color:rgba(255,32,32,0.65);letter-spacing:0.8px;display:flex;justify-content:space-between}
-#capturedFlash{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
-font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;color:var(–red);text-transform:uppercase;
-opacity:0;pointer-events:none}
+#pStamp{
+position:absolute;bottom:4px;left:4px;right:4px;z-index:5;
+font-size:7px;font-family:var(–mono);color:rgba(255,32,32,0.65);
+letter-spacing:0.8px;display:flex;justify-content:space-between;
+}
+#capturedFlash{
+position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
+font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;
+color:var(–red);text-transform:uppercase;opacity:0;pointer-events:none;
+}
 #capturedFlash.flash{animation:capFlash 0.9s ease forwards}
 @keyframes capFlash{0%{opacity:1}60%{opacity:0.7}100%{opacity:0}}
-#captureMeta{width:158px;background:rgba(0,0,0,0.85);border:1px solid rgba(255,32,32,0.25);border-left:none;
-padding:7px 9px;display:flex;flex-direction:column;gap:0}
-.cm-header{font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:3px;color:var(–red);
-border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:5px;margin-bottom:5px;text-transform:uppercase;
-display:flex;justify-content:space-between;align-items:center}
+#captureMeta{
+width:158px;background:rgba(0,0,0,0.85);
+border:1px solid rgba(255,32,32,0.25);border-left:none;
+padding:7px 9px;display:flex;flex-direction:column;
+}
+.cm-header{
+font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:3px;color:var(–red);
+border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:5px;margin-bottom:5px;
+text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;
+}
 .cm-blink{width:5px;height:5px;border-radius:50%;background:var(–red);animation:blink 0.6s steps(1) infinite}
-.cm-row{display:flex;justify-content:space-between;align-items:baseline;
-border-bottom:1px solid rgba(255,255,255,0.04);padding:2.5px 0}
-.cm-key{font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:1.8px;color:rgba(255,255,255,0.25);
-text-transform:uppercase;flex-shrink:0}
+.cm-row{
+display:flex;justify-content:space-between;align-items:baseline;
+border-bottom:1px solid rgba(255,255,255,0.04);padding:2.5px 0;
+}
+.cm-key{
+font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:1.8px;
+color:rgba(255,255,255,0.25);text-transform:uppercase;flex-shrink:0;
+}
 .cm-val{font-family:var(–mono);font-size:9px;color:rgba(255,255,255,0.65);letter-spacing:0.8px;text-align:right}
 .cm-val.red{color:var(–red);text-shadow:0 0 5px var(–red)}
 
 /* ══════════════════════════════════════════
-CONTROL TOOLBAR  (bottom-right strip)
+TOOLBAR  —  series button only
 ══════════════════════════════════════════ */
 #toolbar{
 position:absolute;bottom:44px;right:15px;
-z-index:20;display:none;
-flex-direction:column;align-items:flex-end;gap:6px;
+z-index:20;display:none;flex-direction:column;align-items:flex-end;gap:6px;
 }
-/* Series counter badge */
-#seriesBadge{font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:2px;
+#seriesBadge{
+font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:2px;
 color:var(–red);text-transform:uppercase;display:none;
-text-shadow:0 0 6px rgba(255,32,32,0.5);text-align:right}
+text-shadow:0 0 6px rgba(255,32,32,0.5);text-align:right;
+}
 
 /* ══════════════════════════════════════════
-SENSOR HUD STRIP  (top-center)
+PDF EXPORT POPUP  — full redesign
 ══════════════════════════════════════════ */
-#sensorStrip{
-position:absolute;top:12px;left:50%;transform:translateX(-50%);
-z-index:15;display:none;
-flex-direction:row;gap:6px;align-items:center;
+#pdfOverlay{
+position:absolute;inset:0;z-index:40;
+background:rgba(0,0,0,0.6);
+display:none;align-items:center;justify-content:center;
+backdrop-filter:blur(2px);
 }
-.sens-pill{
-background:rgba(0,0,0,0.65);
-border:1px solid rgba(255,255,255,0.18);
-font-family:var(–mono);font-size:8px;letter-spacing:1px;
-color:rgba(255,255,255,0.5);padding:3px 8px;white-space:nowrap;
+#pdfOverlay.show{display:flex}
+#pdfBox{
+background:rgba(0,0,0,0.92);
+border:1px solid rgba(255,255,255,1);
+padding:28px 32px;
+min-width:260px;
+display:flex;flex-direction:column;gap:14px;
+align-items:stretch;
 }
-.sens-pill.ok{border-color:rgba(80,255,120,0.5);color:rgba(80,255,120,0.85)}
-.sens-pill.warn{border-color:rgba(255,200,0,0.5);color:rgba(255,200,0,0.85)}
-.sens-pill.err{border-color:rgba(255,32,32,0.5);color:rgba(255,32,32,0.7)}
-
-/* Gyro horizon indicator (canvas overlay — top center) */
-#gyroCanvas{
-position:absolute;top:40px;left:50%;transform:translateX(-50%);
-z-index:14;opacity:0.7;pointer-events:none;
-display:none;
+#pdfBox .pb-eyebrow{
+font-family:var(–sans);font-size:8px;font-weight:700;
+letter-spacing:4px;color:var(–red);text-transform:uppercase;
 }
-
-/* Mic live indicator dot */
-#micDot{
-display:inline-block;width:6px;height:6px;border-radius:50%;
-background:rgba(80,255,120,0.9);margin-right:4px;
-animation:micPulse 0.8s ease-in-out infinite;
+#pdfBox .pb-title{
+font-family:var(–sans);font-size:14px;font-weight:700;
+letter-spacing:3px;color:#fff;text-transform:uppercase;
+border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:10px;
 }
-@keyframes micPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
-
-/* PDF export toast */
-#pdfToast{
-position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-background:rgba(0,0,0,0.92);border:1px solid rgba(255,255,255,0.25);
-padding:20px 30px;z-index:30;text-align:center;display:none;flex-direction:column;gap:10px;
-min-width:220px;
+#pdfBox .pb-sub{
+font-family:var(–mono);font-size:9px;
+color:rgba(255,255,255,0.45);letter-spacing:2px;
 }
-#pdfToast .pt-title{font-family:var(–sans);font-size:11px;font-weight:700;letter-spacing:4px;color:var(–red);text-transform:uppercase}
-#pdfToast .pt-sub{font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:2px}
-#pdfToast progress{width:160px;height:3px;accent-color:var(–red)}
-#pdfToast .pt-link{display:none}
+#pdfBox .pb-bar-wrap{
+width:100%;height:2px;background:rgba(255,255,255,0.1);
+}
+#pdfBox .pb-bar-fill{
+height:100%;background:#fff;
+transition:width 0.2s ease;width:0%;
+}
+#pdfBox .pb-count{
+font-family:var(–mono);font-size:10px;
+color:rgba(255,255,255,0.5);letter-spacing:1px;text-align:right;
+}
+/* PDF action buttons row */
+#pdfBox .pb-actions{
+display:flex;gap:8px;flex-direction:column;
+margin-top:4px;
+}
 
 /* TAP HINT */
-#tapHint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);
+#tapHint{
+position:absolute;bottom:120px;left:50%;transform:translateX(-50%);
 font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;
-text-transform:uppercase;color:rgba(255,255,255,0.32);z-index:15;pointer-events:none;
-opacity:0;transition:opacity 0.4s;white-space:nowrap;animation:hintPulse 2s ease-in-out infinite}
+text-transform:uppercase;color:rgba(255,255,255,0.32);
+z-index:15;pointer-events:none;opacity:0;transition:opacity 0.4s;
+white-space:nowrap;animation:hintPulse 2s ease-in-out infinite;
+}
 #tapHint.show{opacity:1}
 @keyframes hintPulse{0%,100%{opacity:0.32}50%{opacity:0.65}}
-#tapHint::before{content:’[ ‘;color:var(–red)}#tapHint::after{content:’ ]’;color:var(–red)}
+#tapHint::before{content:’[ ‘;color:var(–red)}
+#tapHint::after{content:’ ]’;color:var(–red)}
 
 /* SCREEN FLASH */
 #flashOverlay{position:absolute;inset:0;z-index:50;background:rgba(255,255,255,0);pointer-events:none}
 #flashOverlay.flash{animation:scrFlash 0.25s ease forwards}
-@keyframes scrFlash{0%{background:rgba(255,255,255,0.2)}100%{background:rgba(255,255,255,0)}}
+@keyframes scrFlash{0%{background:rgba(255,255,255,0.18)}100%{background:rgba(255,255,255,0)}}
 
 /* CACHE INDICATOR */
-#cacheIndicator{position:absolute;top:15px;left:15px;z-index:15;
+#cacheIndicator{
+position:absolute;top:15px;left:15px;z-index:15;
 font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:2px;
-color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
+color:rgba(255,255,255,0.2);text-transform:uppercase;display:none;
+}
 #cacheIndicator.loaded{color:rgba(80,255,120,0.45)}
 </style>
 
 </head>
+
+<!-- ═══════════════════════  WEBGL SHADERS  ═══════════════════════ -->
+
+<!-- Vertex shader: full-screen quad -->
+
+<script id="vs-src" type="x-shader/x-vertex">
+attribute vec2 aPos;
+varying vec2 vUv;
+void main(){
+  vUv = aPos * 0.5 + 0.5;
+  vUv.y = 1.0 - vUv.y;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}
+</script>
+
+<!-- Fragment shader: edge-detection + EW glitch + colour grade -->
+
+<script id="fs-src" type="x-shader/x-fragment">
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform float uTime;
+uniform float uEw;          /* 0..1  EW intensity           */
+uniform float uLock;        /* 0..1  lock factor            */
+uniform vec3  uColor;       /* reticle dominant colour      */
+
+float rand(vec2 s){ return fract(sin(dot(s,vec2(12.9898,78.233)))*43758.5453); }
+
+void main(){
+  vec2 uv = vUv;
+
+  /* ── EW glitch horizontal shift ── */
+  if(uEw > 0.05){
+    float r = rand(vec2(uTime*0.3, floor(uv.y*80.0)/80.0));
+    if(r > 0.88) uv.x += (rand(vec2(uTime,uv.y)) - 0.5) * 0.06 * uEw;
+  }
+
+  vec4 tex = texture2D(uTex, uv);
+
+  /* ── Sobel edge detection ── */
+  float px = 0.0015, py = 0.0025;
+  float tl=texture2D(uTex,uv+vec2(-px, py)).g;
+  float tc=texture2D(uTex,uv+vec2(  0, py)).g;
+  float tr=texture2D(uTex,uv+vec2( px, py)).g;
+  float ml=texture2D(uTex,uv+vec2(-px,  0)).g;
+  float mr=texture2D(uTex,uv+vec2( px,  0)).g;
+  float bl=texture2D(uTex,uv+vec2(-px,-py)).g;
+  float bc=texture2D(uTex,uv+vec2(  0,-py)).g;
+  float brr=texture2D(uTex,uv+vec2( px,-py)).g;
+  float gx = -tl - 2.0*ml - bl + tr + 2.0*mr + brr;
+  float gy = -tl - 2.0*tc - tr + bl + 2.0*bc  + brr;
+  float edge = clamp(sqrt(gx*gx + gy*gy) * 3.0, 0.0, 1.0);
+
+  /* ── Colour grade ──
+       base: very dark original
+       edges: tinted with uColor (changes with threat/lock state)
+  */
+  vec3 base  = tex.rgb * 0.12;
+  vec3 eCol  = uColor * edge;
+
+  /* Locked state: boost brightness slightly */
+  base += tex.rgb * 0.06 * uLock;
+
+  /* ── EW noise overlay ── */
+  float noise = rand(uv + uTime) * 0.12 * uEw;
+  vec3 nCol = vec3(noise * 0.4, noise * 0.9, noise * 0.5); /* greenish noise */
+
+  gl_FragColor = vec4(base + eCol + nCol, 1.0);
+}
+</script>
+
 <body>
 <div id="container">
 
@@ -281,7 +442,7 @@ color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
 <div id="vignette"></div>
 <div id="scanlines"></div>
 
-<!-- SENSOR STATUS STRIP (top-center) -->
+<!-- SENSOR STRIP -->
 
 <div id="sensorStrip">
   <div class="sens-pill" id="pillGeo">GPS —</div>
@@ -290,7 +451,7 @@ color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
   <div class="sens-pill" id="pillNN">NN: COCO</div>
 </div>
 
-<!-- GYRO HORIZON CANVAS -->
+<!-- GYRO HORIZON -->
 
 <canvas id="gyroCanvas" width="160" height="50"></canvas>
 
@@ -302,7 +463,10 @@ color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
     <div class="pcorner tl"></div><div class="pcorner tr"></div>
     <div class="pcorner bl"></div><div class="pcorner br"></div>
     <div id="pScanlines"></div><div id="pCross"></div>
-    <div id="pStamp"><span id="pStampTime">--:--:--</span><span id="pStampId">ID:------</span></div>
+    <div id="pStamp">
+      <span id="pStampTime">--:--:--</span>
+      <span id="pStampId">ID:------</span>
+    </div>
     <div id="capturedFlash">CAPTURED</div>
   </div>
   <div id="captureMeta">
@@ -315,22 +479,29 @@ color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
 
 <div id="tapHint">TAP TO CAPTURE</div>
 
-<!-- CONTROL TOOLBAR (bottom-right) -->
+<!-- TOOLBAR — series button only -->
 
 <div id="toolbar">
   <div id="seriesBadge"></div>
   <button class="hud-btn" id="seriesBtn">◉ SERIES</button>
-  <button class="hud-btn" id="micBtn">⬤ MIC</button>
-  <button class="hud-btn" id="nnBtn">⊕ LOAD NN</button>
 </div>
 
-<!-- PDF TOAST -->
+<!-- ══════════════════════════════════════════
+     PDF EXPORT POPUP
+══════════════════════════════════════════ -->
 
-<div id="pdfToast">
-  <div class="pt-title">GENERATING REPORT</div>
-  <div class="pt-sub" id="pdfSub">COMPILING DATA...</div>
-  <progress id="pdfProgress" value="0" max="100"></progress>
-  <span class="pt-link hud-btn" id="pdfLink" style="display:none;margin-top:4px">⬇ DOWNLOAD PDF</span>
+<div id="pdfOverlay">
+  <div id="pdfBox">
+    <div class="pb-eyebrow">myFIX // EXPORT</div>
+    <div class="pb-title">INTELLIGENCE REPORT</div>
+    <div class="pb-sub" id="pdfSub">COMPILING DATA...</div>
+    <div class="pb-bar-wrap"><div class="pb-bar-fill" id="pdfBarFill"></div></div>
+    <div class="pb-count" id="pdfCount"></div>
+    <div class="pb-actions" id="pdfActions" style="display:none">
+      <button class="hud-btn" id="pdfDownBtn">⬇ DOWNLOAD PDF</button>
+      <button class="hud-btn" id="pdfCloseBtn">✕ CLOSE</button>
+    </div>
+  </div>
 </div>
 
 <!-- STATUS PANEL -->
@@ -349,25 +520,28 @@ color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
   <div class="sp-row"><span class="sp-key">hdg</span><span class="sp-val" id="gyroStat">—</span></div>
 </div>
 
-<!-- EW ALERT -->
-
 <div id="ewAlert">⚠ EW INTERFERENCE</div>
-<!-- THREAT BOX -->
 <div id="threatBox"><div class="tb-header">// target acquired</div><div id="threatLines"></div></div>
-<!-- TERMINAL -->
 <div id="terminal"><span id="cursor"></span></div>
-<!-- BOTTOM BAR -->
+
 <div id="botbar" style="display:none">
   <span class="coords" id="coordsL">LAT 00°00'00"N  LON 000°00'00"E</span>
   <span class="coords" id="coordsR">ALT --m  HDG --°  PITCH --°</span>
 </div>
-<!-- CACHE INDICATOR -->
 <div id="cacheIndicator">◈ CACHE READY</div>
 
+<!-- VIDEO hidden (WebGL reads it as texture) -->
+
 <video id="video" autoplay playsinline muted webkit-playsinline></video>
+
+<!-- GL canvas behind everything, HUD canvas on top -->
+
+<canvas id="glCanvas"></canvas>
 <canvas id="hudCanvas"></canvas>
 
 </div>
+
+<!-- LIBS -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -378,45 +552,45 @@ color:rgba(255,255,255,0.2);text-transform:uppercase;display:none}
 <script>
 'use strict';
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    PERFORMANCE FLAGS
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 const IS_IOS     = /iPad|iPhone|iPod/.test(navigator.userAgent);
 const IS_ANDROID = /Android/.test(navigator.userAgent);
-const IS_MOBILE  = IS_IOS || IS_ANDROID;
-const DETECT_INTERVAL        = IS_MOBILE ? 120 : 80;
-const EFF_DPR                = IS_MOBILE ? Math.min(devicePixelRatio,2) : devicePixelRatio;
-const EW_PARTICLES           = IS_MOBILE ? 4 : 12;
+const IS_MOBILE  = IS_IOS||IS_ANDROID;
+const DETECT_INTERVAL        = IS_MOBILE?120:80;
+const EFF_DPR                = IS_MOBILE?Math.min(devicePixelRatio,2):devicePixelRatio;
+const EW_PARTICLES           = IS_MOBILE?4:12;
 const USE_SHADOW             = !IS_MOBILE;
-const SERIES_INTERVAL_FRAMES = IS_MOBILE ? 40 : 25;
+const SERIES_INTERVAL_FRAMES = IS_MOBILE?40:25;
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    INDEXEDDB CACHE
-════════════════════════════════════════════════════ */
-const DB_NAME='myfix_cache', DB_VER=1, STORE_CAPS='captures';
+════════════════════════════════════════════ */
+const DB_NAME='myfix_cache',DB_VER=1,STORE_CAPS='captures';
 let db=null;
 function openDB(){return new Promise((res,rej)=>{
   const r=indexedDB.open(DB_NAME,DB_VER);
   r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE_CAPS)){const s=d.createObjectStore(STORE_CAPS,{keyPath:'id',autoIncrement:true});s.createIndex('ts','ts',{unique:false});s.createIndex('cls','cls',{unique:false});}};
-  r.onsuccess=e=>{db=e.target.result;res(db);}; r.onerror=()=>rej(r.error);
+  r.onsuccess=e=>{db=e.target.result;res(db);};r.onerror=()=>rej(r.error);
 });}
 function dbSave(rec){if(!db)return Promise.resolve(null);return new Promise((res,rej)=>{const tx=db.transaction(STORE_CAPS,'readwrite');const r=tx.objectStore(STORE_CAPS).add(rec);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
 function dbCount(){if(!db)return Promise.resolve(0);return new Promise(res=>{const tx=db.transaction(STORE_CAPS,'readonly');const r=tx.objectStore(STORE_CAPS).count();r.onsuccess=()=>res(r.result);r.onerror=()=>res(0);});}
-function dbClear(){if(!db)return Promise.resolve();return new Promise(res=>{const tx=db.transaction(STORE_CAPS,'readwrite');tx.objectStore(STORE_CAPS).clear();tx.oncomplete=res;});}
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    THREAT CLASSIFIER
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 const T_HIGH=new Set(['person','car','truck','bus','motorcycle','airplane','boat','train']);
 const T_MED=new Set(['bicycle','horse','cow','dog','cat','bird','sheep','bear','elephant','zebra','giraffe']);
 function getThreat(cls){if(T_HIGH.has(cls))return'HIGH';if(T_MED.has(cls))return'MED';return'LOW';}
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    DOM REFS
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 const video      = document.getElementById('video');
-const canvas     = document.getElementById('hudCanvas');
-const ctx        = canvas.getContext('2d',{alpha:true,desynchronized:IS_MOBILE});
+const glCanvas   = document.getElementById('glCanvas');
+const hudCanvas  = document.getElementById('hudCanvas');
+const ctx        = hudCanvas.getContext('2d',{alpha:true,desynchronized:IS_MOBILE});
 const startBtn   = document.getElementById('startBtn');
 const terminal   = document.getElementById('terminal');
 const cursorEl   = document.getElementById('cursor');
@@ -427,13 +601,14 @@ const tapHint    = document.getElementById('tapHint');
 const flashOv    = document.getElementById('flashOverlay');
 const seriesBtn  = document.getElementById('seriesBtn');
 const seriesBadge= document.getElementById('seriesBadge');
-const pdfToast   = document.getElementById('pdfToast');
+const pdfOverlay = document.getElementById('pdfOverlay');
 const pdfSub     = document.getElementById('pdfSub');
-const pdfProgress= document.getElementById('pdfProgress');
-const pdfLink    = document.getElementById('pdfLink');
+const pdfBarFill = document.getElementById('pdfBarFill');
+const pdfCount   = document.getElementById('pdfCount');
+const pdfActions = document.getElementById('pdfActions');
+const pdfDownBtn = document.getElementById('pdfDownBtn');
+const pdfCloseBtn= document.getElementById('pdfCloseBtn');
 const cacheInd   = document.getElementById('cacheIndicator');
-const micBtn     = document.getElementById('micBtn');
-const nnBtn      = document.getElementById('nnBtn');
 const gyroCanv   = document.getElementById('gyroCanvas');
 const gyroCtx    = gyroCanv.getContext('2d');
 const pillGeo    = document.getElementById('pillGeo');
@@ -441,312 +616,268 @@ const pillMic    = document.getElementById('pillMic');
 const pillGyro   = document.getElementById('pillGyro');
 const pillNN     = document.getElementById('pillNN');
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    STATE
-════════════════════════════════════════════════════ */
-let model, allPredictions=[], primaryTarget=null;
+════════════════════════════════════════════ */
+let model,allPredictions=[],primaryTarget=null;
 let currentPos={x:innerWidth/2,y:innerHeight/2};
 let targetPos={x:innerWidth/2,y:innerHeight/2,active:false};
-let isLocked=false, lockFactor=0;
-let pulseTime=0, scanAngle=0, textTick=0;
-let infoLines=[], glitchActive=0;
-let captureCount=0, cardVisible=false;
-let ewIntensity=0, ewTimer=0;
+let isLocked=false,lockFactor=0;
+let pulseTime=0,scanAngle=0,textTick=0;
+let infoLines=[],glitchActive=0;
+let captureCount=0,cardVisible=false;
+let ewIntensity=0,ewTimer=0;
 
 /* Sensors */
-let gpsLat=null, gpsLon=null, gpsAlt=null, gpsAcc=null;
-let gpsReal=false;                          // true once real GPS obtained
-let gyroAlpha=0, gyroBeta=0, gyroGamma=0;  // device orientation
-let gyroActive=false;
-let micActive=false;
-let recognition=null;
-
-/* Fake coords (fallback until real GPS) */
+let gpsLat=null,gpsLon=null,gpsAlt=null,gpsAcc=null,gpsReal=false;
+let gyroAlpha=0,gyroBeta=0,gyroGamma=0,gyroActive=false;
+let micActive=false,recognition=null;
 let fakeLat=55.7558+(Math.random()-0.5)*0.01;
 let fakeLon=37.6173+(Math.random()-0.5)*0.01;
 
 /* Series */
-let seriesActive=false, seriesCaptures=[], seriesThrottle=0;
+let seriesActive=false,seriesCaptures=[],seriesThrottle=0;
 
-/* Extra neural nets loaded from GitHub Pages */
+/* Extra models */
 let extraModels=[];
 
-/* ════════════════════════════════════════════════════
+/* WebGL state */
+let gl=null,glProgram=null,glTexture=null;
+let uTime=null,uEw=null,uLock=null,uColor=null;
+let glReady=false;
+
+/* ════════════════════════════════════════════
    TERMINAL
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 function ts(){const n=new Date();return`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;}
-const logQ=[]; let logBusy=false;
+const logQ=[];let logBusy=false;
 async function typeLog(msg,cls='info'){await new Promise(res=>{logQ.push({msg,cls,res});if(!logBusy)drainLog();});}
 async function drainLog(){
-  if(!logQ.length){logBusy=false;return;} logBusy=true;
-  const {msg,cls,res}=logQ.shift();
-  const e=document.createElement('div'); e.className=`log-entry ${cls}`;
+  if(!logQ.length){logBusy=false;return;}logBusy=true;
+  const{msg,cls,res}=logQ.shift();
+  const e=document.createElement('div');e.className=`log-entry ${cls}`;
   const t=document.createElement('span');t.className='log-ts';t.textContent=ts();
   const p=document.createElement('span');p.className='log-prefix';p.textContent='›';
   const x=document.createElement('span');
-  e.append(t,p,x); terminal.insertBefore(e,cursorEl);
-  while(terminal.querySelectorAll('.log-entry').length>14) terminal.removeChild(terminal.querySelector('.log-entry'));
+  e.append(t,p,x);terminal.insertBefore(e,cursorEl);
+  while(terminal.querySelectorAll('.log-entry').length>14)terminal.removeChild(terminal.querySelector('.log-entry'));
   for(let i=0;i<=msg.length;i++){x.textContent=msg.substring(0,i);await new Promise(r=>setTimeout(r,16));}
-  res(); drainLog();
+  res();drainLog();
 }
-/* Instant log (no type animation) — for rapid sensor updates */
 function logInstant(msg,cls='info'){
-  const e=document.createElement('div'); e.className=`log-entry ${cls}`;
+  const e=document.createElement('div');e.className=`log-entry ${cls}`;
   const t=document.createElement('span');t.className='log-ts';t.textContent=ts();
   const p=document.createElement('span');p.className='log-prefix';p.textContent='›';
   const x=document.createElement('span');x.textContent=msg;
-  e.append(t,p,x); terminal.insertBefore(e,cursorEl);
-  while(terminal.querySelectorAll('.log-entry').length>14) terminal.removeChild(terminal.querySelector('.log-entry'));
+  e.append(t,p,x);terminal.insertBefore(e,cursorEl);
+  while(terminal.querySelectorAll('.log-entry').length>14)terminal.removeChild(terminal.querySelector('.log-entry'));
 }
 
-/* ════════════════════════════════════════════════════
-   GEOLOCATION
-════════════════════════════════════════════════════ */
-function initGeo(){
-  if(!navigator.geolocation){
-    pillGeo.textContent='GPS N/A'; pillGeo.className='sens-pill err';
-    typeLog('GPS: NOT SUPPORTED','threat'); return;
+/* ════════════════════════════════════════════
+   WEBGL — edge-detection shader pipeline
+════════════════════════════════════════════ */
+function initWebGL(){
+  gl=glCanvas.getContext('webgl',{alpha:false,antialias:false,preserveDrawingBuffer:false});
+  if(!gl){typeLog('WEBGL NOT SUPPORTED — FALLBACK','threat');return;}
+
+  function compileShader(type,src){
+    const s=gl.createShader(type);
+    gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(s));}
+    return s;
   }
-  pillGeo.textContent='GPS WAIT'; pillGeo.className='sens-pill warn';
+  const vs=compileShader(gl.VERTEX_SHADER,  document.getElementById('vs-src').text);
+  const fs=compileShader(gl.FRAGMENT_SHADER,document.getElementById('fs-src').text);
+  glProgram=gl.createProgram();
+  gl.attachShader(glProgram,vs);gl.attachShader(glProgram,fs);
+  gl.linkProgram(glProgram);gl.useProgram(glProgram);
+
+  /* Full-screen quad */
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]),gl.STATIC_DRAW);
+  const aPos=gl.getAttribLocation(glProgram,'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+
+  /* Uniforms */
+  uTime  = gl.getUniformLocation(glProgram,'uTime');
+  uEw    = gl.getUniformLocation(glProgram,'uEw');
+  uLock  = gl.getUniformLocation(glProgram,'uLock');
+  uColor = gl.getUniformLocation(glProgram,'uColor');
+
+  /* Video texture */
+  glTexture=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,glTexture);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.uniform1i(gl.getUniformLocation(glProgram,'uTex'),0);
+
+  glReady=true;
+  renderGL();
+}
+
+function resizeGL(){
+  glCanvas.width  = Math.round(innerWidth  * Math.min(devicePixelRatio,2));
+  glCanvas.height = Math.round(innerHeight * Math.min(devicePixelRatio,2));
+}
+
+function renderGL(){
+  requestAnimationFrame(renderGL);
+  if(!glReady||video.readyState<2)return;
+
+  resizeGL();
+  gl.viewport(0,0,glCanvas.width,glCanvas.height);
+
+  /* Upload current video frame as texture */
+  gl.bindTexture(gl.TEXTURE_2D,glTexture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,video);
+
+  /* Pass uniforms */
+  gl.uniform1f(uTime,  performance.now()*0.001);
+  gl.uniform1f(uEw,    Math.min(ewIntensity/20,1));
+  gl.uniform1f(uLock,  lockFactor);
+
+  /* Shader edge colour follows lock state / threat */
+  const tier=primaryTarget?getThreat(primaryTarget.class.toLowerCase()):null;
+  let cr=0.8,cg=0.85,cb=1.0;
+  if(isLocked){
+    if(tier==='HIGH'){cr=1.0;cg=0.08;cb=0.08;}
+    else if(tier==='MED'){cr=1.0;cg=0.55;cb=0.0;}
+    else{cr=1.0;cg=0.86;cb=0.2;}
+  }
+  if(seriesActive){cr=Math.min(1,cr+0.2);cg*=0.7;}
+  gl.uniform3f(uColor,cr,cg,cb);
+
+  gl.drawArrays(gl.TRIANGLES,0,6);
+}
+
+/* ════════════════════════════════════════════
+   GEOLOCATION
+════════════════════════════════════════════ */
+function initGeo(){
+  if(!navigator.geolocation){pillGeo.textContent='GPS N/A';pillGeo.className='sens-pill err';typeLog('GPS: NOT SUPPORTED','threat');return;}
+  pillGeo.textContent='GPS WAIT';pillGeo.className='sens-pill warn';
   navigator.geolocation.watchPosition(
     pos=>{
-      gpsLat=pos.coords.latitude;
-      gpsLon=pos.coords.longitude;
-      gpsAlt=pos.coords.altitude||null;
-      gpsAcc=Math.round(pos.coords.accuracy);
-      gpsReal=true;
-      pillGeo.textContent=`GPS ±${gpsAcc}m`; pillGeo.className='sens-pill ok';
+      gpsLat=pos.coords.latitude;gpsLon=pos.coords.longitude;
+      gpsAlt=pos.coords.altitude||null;gpsAcc=Math.round(pos.coords.accuracy);gpsReal=true;
+      pillGeo.textContent=`GPS ±${gpsAcc}m`;pillGeo.className='sens-pill ok';
       document.getElementById('gpsStat').textContent=`${gpsLat.toFixed(4)}°`;
       document.getElementById('gpsStat').className='sp-val ok';
       updateCoordsBar();
     },
-    err=>{
-      pillGeo.textContent='GPS ERR'; pillGeo.className='sens-pill err';
-      typeLog(`GPS ERROR: ${err.message.substring(0,30)}`,'threat');
-    },
-    {enableHighAccuracy:true, maximumAge:2000, timeout:10000}
+    err=>{pillGeo.textContent='GPS ERR';pillGeo.className='sens-pill err';typeLog(`GPS ERR: ${err.message.slice(0,30)}`,'threat');},
+    {enableHighAccuracy:true,maximumAge:2000,timeout:10000}
   );
 }
 function getLat(){return gpsReal?gpsLat:fakeLat;}
 function getLon(){return gpsReal?gpsLon:fakeLon;}
-
-/* Fake coord drift (runs always, shown when no real GPS) */
-setInterval(()=>{
-  fakeLat+=(Math.random()-0.5)*0.00005; fakeLon+=(Math.random()-0.5)*0.00005;
-  if(!gpsReal) updateCoordsBar();
-},1500);
-
+setInterval(()=>{fakeLat+=(Math.random()-0.5)*0.00005;fakeLon+=(Math.random()-0.5)*0.00005;if(!gpsReal)updateCoordsBar();},1500);
 function updateCoordsBar(){
-  const la=getLat(), lo=getLon();
+  const la=getLat(),lo=getLon();
   const f=v=>`${Math.floor(Math.abs(v))}°${String(Math.floor((Math.abs(v)%1)*60)).padStart(2,'0')}'${String(((Math.abs(v)%1*60)%1*60)|0).padStart(2,'0')}"`;
   document.getElementById('coordsL').textContent=`LAT ${f(la)}${la>0?'N':'S'}  LON ${f(lo)}${lo>0?'E':'W'}`;
   const alt=gpsAlt?Math.round(gpsAlt):180+Math.round(Math.sin(Date.now()/7000)*5);
   const hdg=Math.round(gyroAlpha)||((360+Math.round(45+Math.sin(Date.now()/10000)*20))%360);
-  const pitch=Math.round(gyroBeta)||0;
-  document.getElementById('coordsR').textContent=`ALT ${alt}m  HDG ${hdg}°  PITCH ${pitch}°`;
+  document.getElementById('coordsR').textContent=`ALT ${alt}m  HDG ${hdg}°  PITCH ${Math.round(gyroBeta)||0}°`;
 }
 
-/* ════════════════════════════════════════════════════
-   GYROSCOPE / DEVICE ORIENTATION
-════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   GYROSCOPE
+════════════════════════════════════════════ */
 async function initGyro(){
-  /* iOS 13+ requires permission */
-  if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
-    try{
-      const perm = await DeviceOrientationEvent.requestPermission();
-      if(perm!=='granted'){pillGyro.textContent='GYRO DENIED';pillGyro.className='sens-pill err';return;}
-    }catch(e){pillGyro.textContent='GYRO ERR';pillGyro.className='sens-pill err';return;}
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    try{const p=await DeviceOrientationEvent.requestPermission();if(p!=='granted'){pillGyro.textContent='GYRO DENIED';pillGyro.className='sens-pill err';return;}}
+    catch{pillGyro.textContent='GYRO ERR';pillGyro.className='sens-pill err';return;}
   }
-  if(!window.DeviceOrientationEvent){
-    pillGyro.textContent='GYRO N/A';pillGyro.className='sens-pill err';
-    typeLog('GYRO: NOT SUPPORTED','threat');return;
-  }
-  window.addEventListener('deviceorientation', onOrientation, true);
-  pillGyro.textContent='GYRO OK'; pillGyro.className='sens-pill ok'; gyroActive=true;
+  if(!window.DeviceOrientationEvent){pillGyro.textContent='GYRO N/A';pillGyro.className='sens-pill err';return;}
+  window.addEventListener('deviceorientation',onOrientation,true);
+  pillGyro.textContent='GYRO OK';pillGyro.className='sens-pill ok';gyroActive=true;
   gyroCanv.style.display='block';
   typeLog('GYRO SENSOR ONLINE','gyro');
 }
 function onOrientation(e){
-  gyroAlpha = e.alpha||0;   // compass heading 0-360
-  gyroBeta  = e.beta ||0;   // front-back tilt -180/180
-  gyroGamma = e.gamma||0;   // left-right tilt -90/90
+  gyroAlpha=e.alpha||0;gyroBeta=e.beta||0;gyroGamma=e.gamma||0;
   document.getElementById('gyroStat').textContent=`${Math.round(gyroAlpha)}°`;
-  drawGyroHorizon();
-  updateCoordsBar();
+  drawGyroHorizon();updateCoordsBar();
 }
 function drawGyroHorizon(){
-  const W=gyroCanv.width, H=gyroCanv.height;
-  gyroCtx.clearRect(0,0,W,H);
-  const roll=gyroGamma*(Math.PI/180);
-  const pitch=gyroBeta/90; // -1..1
-
-  gyroCtx.save();
-  gyroCtx.translate(W/2, H/2);
-  gyroCtx.rotate(roll);
-
-  // sky / ground
+  const W=gyroCanv.width,H=gyroCanv.height;gyroCtx.clearRect(0,0,W,H);
+  const roll=gyroGamma*(Math.PI/180),pitch=gyroBeta/90;
+  gyroCtx.save();gyroCtx.translate(W/2,H/2);gyroCtx.rotate(roll);
   const grad=gyroCtx.createLinearGradient(0,-H,0,H);
-  grad.addColorStop(0,'rgba(0,80,160,0.35)');
-  grad.addColorStop(0.5-pitch*0.3,'rgba(0,80,160,0.25)');
-  grad.addColorStop(0.5-pitch*0.3,'rgba(80,50,0,0.25)');
-  grad.addColorStop(1,'rgba(80,50,0,0.35)');
-  gyroCtx.fillStyle=grad;
-  gyroCtx.fillRect(-W,-H,W*2,H*2);
-
-  // Horizon line
-  gyroCtx.strokeStyle='rgba(255,255,255,0.7)'; gyroCtx.lineWidth=1;
-  gyroCtx.setLineDash([8,4]);
-  gyroCtx.beginPath();
-  gyroCtx.moveTo(-W/2, pitch*30); gyroCtx.lineTo(W/2, pitch*30);
-  gyroCtx.stroke(); gyroCtx.setLineDash([]);
-
-  // Center mark
-  gyroCtx.strokeStyle='rgba(255,32,32,0.9)'; gyroCtx.lineWidth=1.5;
-  gyroCtx.beginPath(); gyroCtx.moveTo(-10,0); gyroCtx.lineTo(-4,0);
-  gyroCtx.moveTo(4,0);  gyroCtx.lineTo(10,0);
-  gyroCtx.moveTo(0,-6); gyroCtx.lineTo(0,-2);
-  gyroCtx.stroke();
+  grad.addColorStop(0,'rgba(0,80,160,0.35)');grad.addColorStop(0.5-pitch*0.3,'rgba(0,80,160,0.25)');
+  grad.addColorStop(0.5-pitch*0.3,'rgba(80,50,0,0.25)');grad.addColorStop(1,'rgba(80,50,0,0.35)');
+  gyroCtx.fillStyle=grad;gyroCtx.fillRect(-W,-H,W*2,H*2);
+  gyroCtx.strokeStyle='rgba(255,255,255,0.7)';gyroCtx.lineWidth=1;gyroCtx.setLineDash([8,4]);
+  gyroCtx.beginPath();gyroCtx.moveTo(-W/2,pitch*30);gyroCtx.lineTo(W/2,pitch*30);gyroCtx.stroke();gyroCtx.setLineDash([]);
+  gyroCtx.strokeStyle='rgba(255,32,32,0.9)';gyroCtx.lineWidth=1.5;
+  gyroCtx.beginPath();gyroCtx.moveTo(-10,0);gyroCtx.lineTo(-4,0);gyroCtx.moveTo(4,0);gyroCtx.lineTo(10,0);gyroCtx.moveTo(0,-6);gyroCtx.lineTo(0,-2);gyroCtx.stroke();
   gyroCtx.restore();
-
-  // HDG text
-  gyroCtx.fillStyle='rgba(255,255,255,0.5)'; gyroCtx.font='8px Share Tech Mono';
-  gyroCtx.textAlign='center';
-  gyroCtx.fillText(`HDG ${Math.round(gyroAlpha)}°  PITCH ${Math.round(gyroBeta)}°  ROLL ${Math.round(gyroGamma)}°`, W/2, H-4);
+  gyroCtx.fillStyle='rgba(255,255,255,0.45)';gyroCtx.font='8px Share Tech Mono';gyroCtx.textAlign='center';
+  gyroCtx.fillText(`HDG ${Math.round(gyroAlpha)}°  PITCH ${Math.round(gyroBeta)}°  ROLL ${Math.round(gyroGamma)}°`,W/2,H-4);
 }
 
-/* ════════════════════════════════════════════════════
-   MICROPHONE + WEB SPEECH API
-════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   MICROPHONE + SPEECH  (auto-start, always on)
+════════════════════════════════════════════ */
 function initMic(){
-  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SpeechRecognition){
-    pillMic.textContent='MIC N/A'; pillMic.className='sens-pill err';
-    typeLog('SPEECH API: NOT SUPPORTED','threat'); return;
-  }
-  recognition=new SpeechRecognition();
-  recognition.continuous=true;
-  recognition.interimResults=true;
-  recognition.lang='ru-RU';          // Russian by default; falls back to detected
-
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){pillMic.textContent='MIC N/A';pillMic.className='sens-pill err';typeLog('SPEECH API N/A','threat');return;}
+  recognition=new SR();
+  recognition.continuous=true;recognition.interimResults=true;recognition.lang='ru-RU';
   recognition.onstart=()=>{
     micActive=true;
-    pillMic.innerHTML='<span id="micDot" class="micDot"></span>MIC ON';
+    pillMic.innerHTML='<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(80,255,120,0.9);margin-right:4px;animation:blink 0.6s steps(1) infinite"></span>MIC ON';
     pillMic.className='sens-pill ok';
-    micBtn.classList.add('armed');
     typeLog('MIC ONLINE — LISTENING','voice');
   };
-  recognition.onend=()=>{
-    if(micActive){ recognition.start(); } // auto-restart if still enabled
-  };
+  recognition.onend=()=>{if(micActive)try{recognition.start();}catch{}};
   recognition.onerror=e=>{
-    if(e.error==='not-allowed'){
-      pillMic.textContent='MIC DENY'; pillMic.className='sens-pill err';
-      typeLog('MIC: ACCESS DENIED','threat'); micActive=false;
-    }
+    if(e.error==='not-allowed'){pillMic.textContent='MIC DENY';pillMic.className='sens-pill err';micActive=false;}
   };
   recognition.onresult=e=>{
-    let interim='', final='';
+    let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const t=e.results[i][0].transcript.toUpperCase().trim();
-      if(e.results[i].isFinal) final+=t; else interim+=t;
+      if(e.results[i].isFinal)final+=t;else interim+=t;
     }
-    if(final) logInstant(`"${final}"`, 'voice');
+    if(final){logInstant(`"${final}"','voice`);}
     else if(interim){
-      // Update last interim line
-      const last=terminal.querySelector('.log-entry.voice:last-of-type');
-      if(last&&last.dataset.interim==='1') last.querySelector('span:last-child').textContent=`"${interim}..."`;
+      const last=terminal.querySelector('.log-entry.voice[data-interim="1"]');
+      if(last)last.querySelector('span:last-child').textContent=`"${interim}..."`;
       else{
-        const e2=document.createElement('div'); e2.className='log-entry voice'; e2.dataset.interim='1';
+        const e2=document.createElement('div');e2.className='log-entry voice';e2.dataset.interim='1';
         const t2=document.createElement('span');t2.className='log-ts';t2.textContent=ts();
         const p2=document.createElement('span');p2.className='log-prefix';p2.textContent='›';
         const x2=document.createElement('span');x2.textContent=`"${interim}..."`;
-        e2.append(t2,p2,x2); terminal.insertBefore(e2,cursorEl);
-        while(terminal.querySelectorAll('.log-entry').length>14) terminal.removeChild(terminal.querySelector('.log-entry'));
+        e2.append(t2,p2,x2);terminal.insertBefore(e2,cursorEl);
+        while(terminal.querySelectorAll('.log-entry').length>14)terminal.removeChild(terminal.querySelector('.log-entry'));
       }
     }
   };
+  try{recognition.start();}catch{}
 }
 
-function toggleMic(){
-  if(!recognition){ initMic(); }
-  if(!recognition) return;
-  if(!micActive){
-    micActive=true;
-    try{ recognition.start(); }catch{}
-  } else {
-    micActive=false;
-    recognition.stop();
-    pillMic.textContent='MIC OFF'; pillMic.className='sens-pill';
-    micBtn.classList.remove('armed');
-    typeLog('MIC OFFLINE','info');
-  }
-}
-micBtn.addEventListener('click',e=>{e.stopPropagation();toggleMic();});
-
-/* ════════════════════════════════════════════════════
-   EXTRA NEURAL NETWORK LOADER
-   Loads TF.js model from a GitHub Pages URL.
-   Model must export a predict(videoEl) function or
-   be a standard tf.LayersModel/GraphModel.
-   Protocol: window.__myfix_models registry.
-════════════════════════════════════════════════════ */
-window.__myfix_models = window.__myfix_models || {};
-
-async function loadExternalNN(url){
-  try{
-    typeLog(`LOADING NN: ${url.split('/').slice(-2).join('/')}...`,'info');
-    // Try loading as a TF.js SavedModel (model.json)
-    const m=await tf.loadGraphModel(url);
-    const name=url.split('/').filter(Boolean).pop().replace('.json','');
-    extraModels.push({name, model:m, url});
-    window.__myfix_models[name]=m;
-    pillNN.textContent=`NN:${extraModels.length+1}`; pillNN.className='sens-pill ok';
-    typeLog(`NN LOADED: ${name}`,'voice');
-    return m;
-  }catch(e){
-    typeLog(`NN LOAD FAILED: ${e.message.substring(0,40)}`,'threat');
-    return null;
-  }
-}
-
-/* NN button — prompts for GitHub Pages URL */
-nnBtn.addEventListener('click',async e=>{
-  e.stopPropagation();
-  const url=prompt('Enter GitHub Pages model.json URL:\n(e.g. https://user.github.io/model/model.json)');
-  if(url&&url.trim()){
-    await loadExternalNN(url.trim());
-  }
-});
-
-/* Public API — external scripts can call this too */
-window.myfix={
-  loadModel: loadExternalNN,
-  getModels: ()=>extraModels,
-  typeLog,
-  logInstant,
-};
-
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    PORTRAIT CAPTURE
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 function buildCaptureRecord(pred,imgDataURL){
   const uid='0x'+Math.random().toString(16).slice(2,8).toUpperCase();
   const tier=getThreat(pred.class.toLowerCase());
   const sec=String.fromCharCode(65+Math.floor(Math.random()*6))+(Math.floor(Math.random()*9)+1);
   const alt=gpsAlt?Math.round(gpsAlt):180+Math.round(Math.sin(Date.now()/7000)*5);
-  const spd=Math.round(12+Math.random()*3);
-  return{
-    id:undefined,ts:new Date().toISOString(),tsDisplay:ts(),uid,
+  return{id:undefined,ts:new Date().toISOString(),tsDisplay:ts(),uid,
     cls:pred.class,threat:tier,conf:Math.round(pred.score*100),sector:sec,
-    lat:getLat().toFixed(5),lon:getLon().toFixed(5),alt,spd,
-    heading:Math.round(gyroAlpha),pitch:Math.round(gyroBeta),
-    img:imgDataURL
-  };
+    lat:getLat().toFixed(5),lon:getLon().toFixed(5),alt,spd:Math.round(12+Math.random()*3),
+    heading:Math.round(gyroAlpha),pitch:Math.round(gyroBeta),img:imgDataURL};
 }
 function extractPortraitDataURL(pred){
   if(!video.videoWidth||!video.videoHeight)return null;
-  const[bx,by,bw,bh]=pred.bbox;
-  const pad=0.18;
+  const[bx,by,bw,bh]=pred.bbox,pad=0.18;
   const cx=Math.max(0,bx-bw*pad),cy=Math.max(0,by-bh*pad);
   const cw=Math.min(video.videoWidth-cx,bw*(1+pad*2)),ch=Math.min(video.videoHeight-cy,bh*(1+pad*2));
   portCanvas.width=130;portCanvas.height=130;
@@ -755,33 +886,20 @@ function extractPortraitDataURL(pred){
   return portCanvas.toDataURL('image/jpeg',0.82);
 }
 function renderCardFromRecord(rec){
-  const img=new Image();
-  img.onload=()=>{portCanvas.width=130;portCanvas.height=130;portCtx.drawImage(img,0,0,130,130);};
-  img.src=rec.img;
+  const img=new Image();img.onload=()=>{portCanvas.width=130;portCanvas.height=130;portCtx.drawImage(img,0,0,130,130);};img.src=rec.img;
   document.getElementById('pStampTime').textContent=rec.tsDisplay;
   document.getElementById('pStampId').textContent='ID:'+rec.uid;
   const rows=[
-    {k:'CLASS',v:rec.cls.toUpperCase(),red:false},
-    {k:'THREAT',v:rec.threat,red:rec.threat==='HIGH'},
-    {k:'CONF',v:rec.conf+'%',red:false},
-    {k:'SECTOR',v:rec.sector,red:false},
-    {k:'UID',v:rec.uid,red:false},
-    {k:'LAT',v:rec.lat+'°',red:false},
-    {k:'LON',v:rec.lon+'°',red:false},
-    {k:'ALT',v:rec.alt+'m',red:false},
-    {k:'HDG',v:rec.heading+'°',red:false},
-    {k:'STATUS',v:'LOCKED',red:true},
+    {k:'CLASS',v:rec.cls.toUpperCase(),red:false},{k:'THREAT',v:rec.threat,red:rec.threat==='HIGH'},
+    {k:'CONF',v:rec.conf+'%',red:false},{k:'SECTOR',v:rec.sector,red:false},
+    {k:'UID',v:rec.uid,red:false},{k:'LAT',v:rec.lat+'°',red:false},{k:'LON',v:rec.lon+'°',red:false},
+    {k:'ALT',v:rec.alt+'m',red:false},{k:'HDG',v:rec.heading+'°',red:false},{k:'STATUS',v:'LOCKED',red:true},
   ];
   const cmRows=document.getElementById('cmRows');cmRows.innerHTML='';
-  rows.forEach(r=>{
-    const d=document.createElement('div');d.className='cm-row';
-    d.innerHTML=`<span class="cm-key">${r.k}</span><span class="cm-val${r.red?' red':''}">${r.v}</span>`;
-    cmRows.appendChild(d);
-  });
+  rows.forEach(r=>{const d=document.createElement('div');d.className='cm-row';d.innerHTML=`<span class="cm-key">${r.k}</span><span class="cm-val${r.red?' red':''}">${r.v}</span>`;cmRows.appendChild(d);});
 }
 async function doCapture(pred){
-  const imgData=extractPortraitDataURL(pred);
-  if(!imgData)return null;
+  const imgData=extractPortraitDataURL(pred);if(!imgData)return null;
   const rec=buildCaptureRecord(pred,imgData);
   try{const id=await dbSave(rec);rec.id=id;}catch{}
   const cnt=await dbCount();
@@ -797,9 +915,9 @@ function flashEffects(){
 function showCard(){captureCard.classList.add('show');cardVisible=true;tapHint.classList.remove('show');}
 function hideCard(){captureCard.classList.remove('show');cardVisible=false;}
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    SERIES MODE
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 function startSeries(){
   seriesActive=true;seriesCaptures=[];seriesThrottle=0;
   seriesBtn.classList.add('armed');seriesBtn.textContent='■ STOP SERIES';
@@ -811,15 +929,13 @@ async function stopSeries(){
   seriesBtn.classList.remove('armed');seriesBtn.textContent='◉ SERIES';
   seriesBadge.style.display='none';
   typeLog(`SERIES COMPLETE — ${seriesCaptures.length} CAPTURES`,'info');
-  if(seriesCaptures.length>0) await generatePDF(seriesCaptures);
+  if(seriesCaptures.length>0)await generatePDF(seriesCaptures);
 }
 seriesBtn.addEventListener('click',e=>{e.stopPropagation();if(seriesActive)stopSeries();else startSeries();});
 
 async function seriesTick(){
   if(!seriesActive||!allPredictions.length)return;
-  seriesThrottle++;
-  if(seriesThrottle<SERIES_INTERVAL_FRAMES)return;
-  seriesThrottle=0;
+  seriesThrottle++;if(seriesThrottle<SERIES_INTERVAL_FRAMES)return;seriesThrottle=0;
   for(const pred of allPredictions){
     const rec=await doCapture(pred);if(!rec)continue;
     seriesCaptures.push(rec);seriesBadge.textContent=`SER: ${seriesCaptures.length}`;
@@ -829,22 +945,37 @@ async function seriesTick(){
   }
 }
 
-/* ════════════════════════════════════════════════════
-   PDF GENERATION
-════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   PDF GENERATION  — new popup UI
+════════════════════════════════════════════ */
+let _pdfBlobUrl=null;
+
+function pdfProgress(val,total,sub){
+  pdfBarFill.style.width=Math.round(val/total*100)+'%';
+  pdfSub.textContent=sub;
+  pdfCount.textContent=`${val} / ${total}`;
+}
+
 async function generatePDF(captures){
   const{jsPDF}=window.jspdf;
   if(!jsPDF){typeLog('PDF LIB NOT LOADED','threat');return;}
-  pdfToast.style.display='flex';pdfProgress.value=0;pdfLink.style.display='none';
+
+  /* Show popup */
+  pdfActions.style.display='none';
+  pdfBarFill.style.width='0%';
   pdfSub.textContent='COMPILING DATA...';
+  pdfCount.textContent='';
+  pdfOverlay.classList.add('show');
   await new Promise(r=>setTimeout(r,50));
+
   const W=210,H=297;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const sf=(sz,color=[255,255,255],style='normal')=>{doc.setFont('courier',style);doc.setFontSize(sz);doc.setTextColor(...color);};
+  const sf=(sz,col=[255,255,255],sty='normal')=>{doc.setFont('courier',sty);doc.setFontSize(sz);doc.setTextColor(...col);};
   const total=captures.length;
+
   for(let i=0;i<total;i++){
     const rec=captures[i];
-    pdfSub.textContent=`OBJECT ${i+1} / ${total}`;pdfProgress.value=Math.round((i/total)*100);
+    pdfProgress(i+1,total,`OBJECT ${i+1} / ${total}`);
     await new Promise(r=>setTimeout(r,30));
     if(i>0)doc.addPage();
     doc.setFillColor(0,0,0);doc.rect(0,0,W,H,'F');
@@ -852,21 +983,18 @@ async function generatePDF(captures){
     doc.setFont('courier','bold');doc.setFontSize(10);doc.setTextColor(0,0,0);
     doc.text('myFIX // TACTICAL INTELLIGENCE REPORT',W/2,5.5,{align:'center'});
     doc.setDrawColor(255,32,32);doc.setLineWidth(0.3);doc.rect(3,10,W-6,H-14,'S');
-    sf(7,[255,32,32],'bold');
-    doc.text(`SERIES CAPTURE — OBJECT ${i+1} OF ${total}`,8,16);
+    sf(7,[255,32,32],'bold');doc.text(`SERIES CAPTURE — OBJECT ${i+1} OF ${total}`,8,16);
     doc.text(`SESSION: ${new Date().toISOString()}`,W-8,16,{align:'right'});
     doc.setDrawColor(255,32,32,0.4);doc.setLineWidth(0.15);doc.line(8,18,W-8,18);
     if(rec.img){try{
       doc.setFillColor(10,10,10);doc.rect(8,21,60,60,'F');
       doc.setDrawColor(255,32,32);doc.setLineWidth(0.3);doc.rect(8,21,60,60,'S');
       doc.addImage(rec.img,'JPEG',8,21,60,60);
-      const[bx2,by2,bl]=[ 8,21,6];
+      const[bx,by,bl]=[8,21,6];
       doc.setDrawColor(255,32,32);doc.setLineWidth(0.5);
-      doc.line(bx2,by2+bl,bx2,by2);doc.line(bx2,by2,bx2+bl,by2);
-      doc.line(bx2+60-bl,by2,bx2+60,by2);doc.line(bx2+60,by2,bx2+60,by2+bl);
-      doc.line(bx2,by2+60-bl,bx2,by2+60);doc.line(bx2,by2+60,bx2+bl,by2+60);
-      doc.line(bx2+60-bl,by2+60,bx2+60,by2+60);doc.line(bx2+60,by2+60-bl,bx2+60,by2+60);
-      doc.setFillColor(0,0,0,0.6);doc.rect(8,75,60,5,'F');
+      doc.line(bx,by+bl,bx,by);doc.line(bx,by,bx+bl,by);doc.line(bx+60-bl,by,bx+60,by);doc.line(bx+60,by,bx+60,by+bl);
+      doc.line(bx,by+60-bl,bx,by+60);doc.line(bx,by+60,bx+bl,by+60);doc.line(bx+60-bl,by+60,bx+60,by+60);doc.line(bx+60,by+60-bl,bx+60,by+60);
+      doc.setFillColor(0,0,0);doc.rect(8,75,60,5,'F');
       sf(6,[255,32,32]);doc.text(rec.tsDisplay,10,78.5);doc.text('ID:'+rec.uid,66,78.5,{align:'right'});
     }catch{}}
     const fields=[
@@ -878,8 +1006,7 @@ async function generatePDF(captures){
     fields.forEach(([k,v],idx)=>{
       const y=22+idx*6.2;
       sf(7,[180,180,180],'bold');doc.text(k,76,y);
-      sf(7,(k==='THREAT'&&v==='HIGH')||(k==='STATUS')?[255,32,32]:[220,220,220]);
-      doc.text(v,104,y);
+      sf(7,(k==='THREAT'&&v==='HIGH')||(k==='STATUS')?[255,32,32]:[220,220,220]);doc.text(v,104,y);
       doc.setDrawColor(255,255,255,25);doc.setLineWidth(0.1);doc.line(76,y+1.5,W-8,y+1.5);
     });
     const tc={HIGH:[255,32,32],MED:[255,140,0],LOW:[255,220,50]}[rec.threat]||[200,200,200];
@@ -889,37 +1016,61 @@ async function generatePDF(captures){
     sf(7,[255,32,32],'bold');doc.text('// INTELLIGENCE ASSESSMENT',8,93);
     sf(7,[180,180,180]);
     [`Object "${rec.cls}" detected with ${rec.conf}% confidence. Threat: ${rec.threat}.`,
-     `Position: ${rec.lat}°N ${rec.lon}°E. Altitude: ${rec.alt}m. Heading: ${rec.heading}°.`,
-     `Unique ID: ${rec.uid}. Sector: ${rec.sector}. Archived in session cache.`
+     `Position: ${rec.lat}°N ${rec.lon}°E. Alt: ${rec.alt}m. Heading: ${rec.heading}°.`,
+     `UID: ${rec.uid}. Sector: ${rec.sector}. Archived in session cache.`
     ].forEach((n,j)=>doc.text(n,8,99+j*5,{maxWidth:W-16}));
     doc.setDrawColor(255,32,32,0.2);doc.line(3,H-10,W-3,H-10);
     sf(6,[80,80,80]);doc.text(`myFIX // PAGE ${i+1}/${total} // ${new Date().toUTCString()}`,W/2,H-6,{align:'center'});
     sf(6,[255,32,32]);doc.text(`THREAT: ${rec.threat}`,8,H-6);
   }
-  pdfProgress.value=100;pdfSub.textContent='REPORT READY';
-  const blob=doc.output('blob');
-  const url=URL.createObjectURL(blob);
-  pdfLink.style.display='inline-block';
-  pdfLink.textContent='⬇ DOWNLOAD PDF';
-  pdfLink.onclick=()=>{
-    if(IS_IOS){window.open(url,'_blank');}
-    else{const a=document.createElement('a');a.href=url;a.download=`myFIX_${Date.now()}.pdf`;a.click();}
-  };
-  typeLog(`PDF READY — ${total} OBJECTS`,'info');
-  setTimeout(()=>{if(pdfToast.style.display!=='none'){pdfToast.style.display='none';URL.revokeObjectURL(url);}},30000);
-}
-pdfToast.addEventListener('pointerdown',e=>e.stopPropagation());
 
-/* ════════════════════════════════════════════════════
+  pdfBarFill.style.width='100%';
+  pdfSub.textContent='REPORT READY';
+  pdfCount.textContent=`${total} OBJECTS`;
+
+  /* Create blob & wire download button */
+  const blob=doc.output('blob');
+  if(_pdfBlobUrl)URL.revokeObjectURL(_pdfBlobUrl);
+  _pdfBlobUrl=URL.createObjectURL(blob);
+
+  pdfDownBtn.onclick=()=>{
+    if(IS_IOS){window.open(_pdfBlobUrl,'_blank');}
+    else{const a=document.createElement('a');a.href=_pdfBlobUrl;a.download=`myFIX_${Date.now()}.pdf`;a.click();}
+  };
+  pdfCloseBtn.onclick=()=>{pdfOverlay.classList.remove('show');};
+  pdfActions.style.display='flex';
+
+  typeLog(`PDF READY — ${total} OBJECTS`,'info');
+}
+
+/* Close popup on overlay click (outside box) */
+pdfOverlay.addEventListener('pointerdown',e=>{if(e.target===pdfOverlay){pdfOverlay.classList.remove('show');}});
+
+/* Public API */
+window.myfix={typeLog,logInstant,
+  loadModel:async url=>{
+    try{
+      typeLog(`LOADING NN: ${url.split('/').slice(-2).join('/')}...`,'info');
+      const m=await tf.loadGraphModel(url);
+      const name=url.split('/').filter(Boolean).pop().replace('.json','');
+      extraModels.push({name,model:m,url});
+      pillNN.textContent=`NN:${extraModels.length+1}`;pillNN.className='sens-pill ok';
+      typeLog(`NN LOADED: ${name}`,'voice');return m;
+    }catch(e){typeLog(`NN FAIL: ${e.message.slice(0,40)}`,'threat');return null;}
+  },
+  getModels:()=>extraModels,
+};
+
+/* ════════════════════════════════════════════
    TAP HANDLER
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 document.getElementById('container').addEventListener('pointerdown',e=>{
   if(startBtn.style.display!=='none')return;
-  if(pdfToast.style.display==='flex'){pdfToast.style.display='none';return;}
+  if(pdfOverlay.classList.contains('show')){return;}/* handled by overlay listener */
   if(cardVisible){
     const r=captureCard.getBoundingClientRect();
-    const inside=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
-    if(!inside)hideCard();return;
+    if(!(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom))hideCard();
+    return;
   }
   if(!seriesActive&&isLocked&&primaryTarget){
     (async()=>{
@@ -930,9 +1081,9 @@ document.getElementById('container').addEventListener('pointerdown',e=>{
   }
 });
 
-/* ════════════════════════════════════════════════════
-   START
-════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   START — requests all sensors immediately
+════════════════════════════════════════════ */
 startBtn.onclick=async()=>{
   startBtn.style.opacity='0';startBtn.style.transition='opacity 0.5s';
   setTimeout(()=>startBtn.style.display='none',500);
@@ -943,32 +1094,44 @@ startBtn.onclick=async()=>{
   document.getElementById('toolbar').style.display='flex';
 
   /* Cache */
-  try{
-    await openDB();const cnt=await dbCount();
-    document.getElementById('cacheStat').textContent=cnt;
-    cacheInd.style.display='block';cacheInd.classList.add('loaded');
-    cacheInd.textContent=`◈ CACHE: ${cnt}`;
-    typeLog(`CACHE OK — ${cnt} RECORDS`,'info');
-  }catch{typeLog('CACHE UNAVAILABLE','threat');}
+  try{await openDB();const cnt=await dbCount();document.getElementById('cacheStat').textContent=cnt;cacheInd.style.display='block';cacheInd.classList.add('loaded');cacheInd.textContent=`◈ CACHE: ${cnt}`;typeLog(`CACHE OK — ${cnt} RECORDS`,'info');}
+  catch{typeLog('CACHE UNAVAILABLE','threat');}
 
   await typeLog('BOOT SEQUENCE INITIATED','info');
 
-  /* Camera */
+  /* ── Camera ── */
   await typeLog('REQUESTING CAMERA...','info');
   try{
-    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:IS_MOBILE?1280:1920},height:{ideal:IS_MOBILE?720:1080},frameRate:{ideal:IS_MOBILE?30:60}}});
-    video.srcObject=s;await typeLog('OPTICAL SENSOR OK','info');
-  }catch{await typeLog('CAMERA FAILED','threat');return;}
+    const s=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment',width:{ideal:IS_MOBILE?1280:1920},height:{ideal:IS_MOBILE?720:1080},frameRate:{ideal:IS_MOBILE?30:60}},
+      audio:true   /* request audio here so mic permission fires in one gesture */
+    });
+    /* Split tracks — video to video element, suppress audio from camera */
+    const vStream=new MediaStream(s.getVideoTracks());
+    video.srcObject=vStream;
+    await typeLog('OPTICAL SENSOR OK','info');
+  }catch(err){
+    /* fallback: try video only if audio denied */
+    try{
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      video.srcObject=s;
+      await typeLog('OPTICAL SENSOR OK (no audio)','info');
+    }catch{await typeLog('CAMERA FAILED','threat');return;}
+  }
 
-  /* GPS */
+  /* ── GPS (fires async, no await) ── */
   typeLog('REQUESTING GPS...','geo');
   initGeo();
 
-  /* Gyro */
+  /* ── Gyroscope ── */
   typeLog('REQUESTING GYRO...','gyro');
-  await initGyro();
+  initGyro();  /* async internally but we don't await to keep boot fast */
 
-  /* TF.js */
+  /* ── Microphone / Speech ── */
+  typeLog('REQUESTING MIC...','voice');
+  initMic();
+
+  /* ── TF.js ── */
   await typeLog('LOADING NEURAL NETWORK...','info');
   if(IS_MOBILE){try{await tf.setBackend('webgl');}catch{await tf.setBackend('cpu');}}
   else await tf.setBackend('webgl');
@@ -981,29 +1144,31 @@ startBtn.onclick=async()=>{
   await typeLog('TAP LOCKED TARGET TO CAPTURE','threat');
   await typeLog('SCANNING...','info');
 
-  resize();detectLoop();draw();
+  /* ── WebGL filter ── */
+  initWebGL();
+
+  resize();detectLoop();drawHUD();
 };
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    RESIZE
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 function resize(){
-  canvas.width=Math.round(innerWidth*EFF_DPR);
-  canvas.height=Math.round(innerHeight*EFF_DPR);
+  hudCanvas.width =Math.round(innerWidth *EFF_DPR);
+  hudCanvas.height=Math.round(innerHeight*EFF_DPR);
 }
 window.addEventListener('resize',resize);
 
-/* ════════════════════════════════════════════════════
+/* ════════════════════════════════════════════
    DETECT LOOP
-════════════════════════════════════════════════════ */
+════════════════════════════════════════════ */
 async function detectLoop(){
   if(model&&video.readyState>=3){
     try{allPredictions=await model.detect(video);primaryTarget=allPredictions[0]||null;}catch{}
   }
   await seriesTick();
   if(primaryTarget){
-    const p=primaryTarget;
-    const[x,y,w,h]=p.bbox;
+    const p=primaryTarget;const[x,y,w,h]=p.bbox;
     const sX=innerWidth/(video.videoWidth||1),sY=innerHeight/(video.videoHeight||1);
     targetPos.x=(x+w/2)*sX;targetPos.y=(y+h/2)*sY;targetPos.active=true;
     const dist=Math.hypot(currentPos.x-targetPos.x,currentPos.y-targetPos.y);
@@ -1019,8 +1184,7 @@ async function detectLoop(){
     }
     if(!isLocked&&wasLocked){
       document.getElementById('threatBox').classList.remove('show');
-      document.getElementById('lockStat').textContent='--';
-      document.getElementById('lockStat').className='sp-val';
+      document.getElementById('lockStat').textContent='--';document.getElementById('lockStat').className='sp-val';
       tapHint.classList.remove('show');
     }
     document.getElementById('objCount').textContent=String(allPredictions.length).padStart(2,'0');
@@ -1028,11 +1192,9 @@ async function detectLoop(){
     document.getElementById('confBar').className='bar-fill'+(isLocked?' danger':'');
   }else{
     targetPos.active=false;isLocked=false;
-    document.getElementById('objCount').textContent='00';
-    document.getElementById('confBar').style.width='0%';
+    document.getElementById('objCount').textContent='00';document.getElementById('confBar').style.width='0%';
     document.getElementById('threatBox').classList.remove('show');
-    document.getElementById('lockStat').textContent='--';
-    document.getElementById('lockStat').className='sp-val';
+    document.getElementById('lockStat').textContent='--';document.getElementById('lockStat').className='sp-val';
     tapHint.classList.remove('show');
   }
   setTimeout(detectLoop,DETECT_INTERVAL);
@@ -1047,32 +1209,37 @@ function buildInfo(p){
   infoLines.forEach(l=>{const r=document.createElement('div');r.className='tbi';r.innerHTML=`<span class="tbi-key">${l.k}</span>  ${l.v}`;tl.appendChild(r);});
 }
 
-/* ════════════════════════════════════════════════════
-   DRAW LOOP
-════════════════════════════════════════════════════ */
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const dpr=EFF_DPR,W=canvas.width,H=canvas.height;
+/* ════════════════════════════════════════════
+   HUD DRAW LOOP  (Canvas 2D — reticle & boxes)
+════════════════════════════════════════════ */
+function drawHUD(){
+  ctx.clearRect(0,0,hudCanvas.width,hudCanvas.height);
+  const dpr=EFF_DPR,W=hudCanvas.width,H=hudCanvas.height;
   const dX=targetPos.active?targetPos.x:innerWidth/2;
   const dY=targetPos.active?targetPos.y:innerHeight/2;
   currentPos.x+=(dX-currentPos.x)*0.12;
   currentPos.y+=(dY-currentPos.y)*0.12;
   lockFactor=isLocked?Math.min(1,lockFactor+0.08):Math.max(0,lockFactor-0.04);
   pulseTime+=0.05;scanAngle+=0.02;
+
   const tier=primaryTarget?getThreat(primaryTarget.class.toLowerCase()):null;
   let rr=200,rg=220,rb=255;
   if(isLocked){if(tier==='HIGH'){rr=255;rg=20;rb=20;}else if(tier==='MED'){rr=255;rg=140;rb=0;}else{rr=255;rg=220;rb=50;}}
   if(seriesActive){rr=Math.min(255,rr+30);rg=Math.max(0,rg-40);}
   const mainColor=`rgba(${rr},${rg},${rb},${0.6+0.4*lockFactor})`;
+
   ewTimer++;if(ewTimer%220===0)ewIntensity=20;
   if(ewIntensity>0){ewIntensity=Math.max(0,ewIntensity-0.7);document.getElementById('ewAlert').classList.add('show');document.getElementById('ewBar').style.width=(ewIntensity/20*100)+'%';document.getElementById('ewBar').classList.add('danger');}
   else{document.getElementById('ewAlert').classList.remove('show');document.getElementById('ewBar').style.width='0%';document.getElementById('ewBar').classList.remove('danger');}
+
   ctx.save();
   if(glitchActive>0){ctx.translate((Math.random()-0.5)*12*dpr,(Math.random()-0.5)*6*dpr);glitchActive--;}
   if(ewIntensity>5)ctx.translate((Math.random()-0.5)*8*dpr*(ewIntensity/20),0);
   if(USE_SHADOW){ctx.shadowBlur=8+12*lockFactor;ctx.shadowColor=mainColor;}
   ctx.strokeStyle=mainColor;ctx.fillStyle=mainColor;
   const cx=currentPos.x*dpr,cy=currentPos.y*dpr;
+
+  /* Secondary bboxes */
   if(allPredictions.length>1){
     ctx.save();if(USE_SHADOW)ctx.shadowBlur=3;
     for(let i=1;i<allPredictions.length;i++){
@@ -1087,6 +1254,8 @@ function draw(){
     }
     ctx.restore();
   }
+
+  /* Primary bbox */
   if(primaryTarget&&targetPos.active){
     const p=primaryTarget;const[bx,by,bw,bh]=p.bbox;
     const sX=innerWidth/(video.videoWidth||1),sY=innerHeight/(video.videoHeight||1);
@@ -1098,14 +1267,22 @@ function draw(){
     if(lockFactor>0.4){ctx.setLineDash([3*dpr,5*dpr]);ctx.lineWidth=0.5*dpr;ctx.strokeStyle=`rgba(${rr},${rg},${rb},0.3)`;ctx.beginPath();ctx.moveTo(rx-20*dpr,ry);ctx.lineTo(rx-20*dpr,ry+rh);ctx.moveTo(rx,ry-12*dpr);ctx.lineTo(rx+rw,ry-12*dpr);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=`rgba(${rr},${rg},${rb},0.5)`;ctx.font=`${8*dpr}px 'Share Tech Mono'`;ctx.fillText(`${Math.round(rh/dpr)}px`,rx-18*dpr,ry+rh/2,16*dpr);ctx.fillText(`${Math.round(rw/dpr)}px`,rx+rw/2-12*dpr,ry-14*dpr);}
     ctx.restore();
   }
-  if(seriesActive){const scanY=(Date.now()%2000/2000)*H;ctx.save();ctx.strokeStyle=`rgba(255,32,32,0.15)`;ctx.lineWidth=2*dpr;ctx.beginPath();ctx.moveTo(0,scanY);ctx.lineTo(W,scanY);ctx.stroke();ctx.restore();}
+
+  /* Series scan line */
+  if(seriesActive){const sY2=(Date.now()%2000/2000)*H;ctx.save();ctx.strokeStyle='rgba(255,32,32,0.13)';ctx.lineWidth=2*dpr;ctx.beginPath();ctx.moveTo(0,sY2);ctx.lineTo(W,sY2);ctx.stroke();ctx.restore();}
+
   drawReticle(cx,cy,dpr,lockFactor,mainColor,rr,rg,rb);
   if(lockFactor>0.05){ctx.globalAlpha=lockFactor;drawDataBlock(cx,cy,dpr,mainColor);ctx.globalAlpha=1;}
-  if(ewIntensity>3){const n=Math.min(EW_PARTICLES,Math.round(ewIntensity*0.5));for(let i=0;i<n;i++){ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.12})`;ctx.fillRect(Math.random()*W,Math.random()*H,(1+Math.random()*2)*dpr,dpr);}}
+
+  /* EW HUD noise */
+  if(ewIntensity>3){const n=Math.min(EW_PARTICLES,Math.round(ewIntensity*0.5));for(let i=0;i<n;i++){ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.1})`;ctx.fillRect(Math.random()*W,Math.random()*H,(1+Math.random()*2)*dpr,dpr);}}
+
   drawCornerDeco(W,H,dpr);
-  ctx.restore();requestAnimationFrame(draw);
+  ctx.restore();
+  requestAnimationFrame(drawHUD);
 }
 
+/* ── Reticle ── */
 function drawReticle(cx,cy,dpr,lf,mainColor,rr,rg,rb){
   ctx.save();ctx.translate(cx,cy);
   ctx.strokeStyle=`rgba(${rr},${rg},${rb},0.2)`;ctx.lineWidth=0.5*dpr;ctx.shadowBlur=0;
@@ -1136,7 +1313,7 @@ function drawDataBlock(cx,cy,dpr,mainColor){
 function drawCornerDeco(W,H,dpr){
   const s=30*dpr;ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1*dpr;ctx.shadowBlur=0;ctx.setLineDash([]);
   [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]].forEach(([x,y,sx,sy])=>{ctx.beginPath();ctx.moveTo(x+sx*s,y);ctx.lineTo(x,y);ctx.lineTo(x,y+sy*s);ctx.stroke();});
-  if(!IS_MOBILE){ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5*dpr;ctx.setLineDash([5*dpr,15*dpr]);ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);}
+  if(!IS_MOBILE){ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=0.5*dpr;ctx.setLineDash([5*dpr,15*dpr]);ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);}
 }
 </script>
 
