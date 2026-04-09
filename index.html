@@ -12,6 +12,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --red:#ff2020;
+  --green:#20ff60;
   --mono:'Share Tech Mono',monospace;
   --sans:'Rajdhani',sans-serif;
   --btn-bg:rgba(0,0,0,0.75);
@@ -22,39 +23,13 @@ body{margin:0;background:#000;overflow:hidden;font-family:var(--mono);
   user-select:none;cursor:crosshair;
   -webkit-tap-highlight-color:transparent;touch-action:none}
 #container{position:relative;width:100vw;height:100vh}
-
-/* ── VIDEO hidden — WebGL reads it via texture ── */
 video{display:none}
-
-/* ── WEBGL canvas (background, full screen) ── */
-#glCanvas{
-position:absolute;top:0;left:0;width:100%;height:100%;
-z-index:1;transform:translateZ(0);will-change:transform;
-}
-
-/* ── HUD canvas (detections + reticle) ── */
-#hudCanvas{
-position:absolute;top:0;left:0;width:100%;height:100%;
-pointer-events:none;z-index:5;
-transform:translateZ(0);will-change:transform;
-}
-
-#scanlines{
-position:absolute;inset:0;pointer-events:none;z-index:6;
-background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.13) 3px,rgba(0,0,0,0.13) 4px);
-animation:scanScroll 8s linear infinite;transform:translateZ(0);
-}
+#glCanvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;transform:translateZ(0);will-change:transform;}
+#hudCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;transform:translateZ(0);will-change:transform;}
+#scanlines{position:absolute;inset:0;pointer-events:none;z-index:6;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.13) 3px,rgba(0,0,0,0.13) 4px);animation:scanScroll 8s linear infinite;transform:translateZ(0);}
 @keyframes scanScroll{from{background-position:0 0}to{background-position:0 100px}}
+#vignette{position:absolute;inset:0;pointer-events:none;z-index:4;background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,rgba(0,0,0,0.72) 100%);transform:translateZ(0);}
 
-#vignette{
-position:absolute;inset:0;pointer-events:none;z-index:4;
-background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,rgba(0,0,0,0.72) 100%);
-transform:translateZ(0);
-}
-
-/* ══════════════════════════════════════════
-UNIFIED BUTTON SYSTEM
-══════════════════════════════════════════ */
 .hud-btn{
 background:var(–btn-bg);
 border:1px solid var(–btn-border);
@@ -67,62 +42,29 @@ cursor:pointer;outline:none;
 transition:background 0.15s,box-shadow 0.15s;
 white-space:nowrap;display:inline-block;
 }
-.hud-btn:hover,.hud-btn:active{
-background:rgba(255,255,255,0.1);
-box-shadow:0 0 10px rgba(255,255,255,0.2);
-}
+.hud-btn:hover,.hud-btn:active{background:rgba(255,255,255,0.1);box-shadow:0 0 10px rgba(255,255,255,0.2);}
 .hud-btn.armed{
-border-color:var(–red);color:var(–red);
-animation:btnArmed 1s ease-in-out infinite;
+border-color:var(–green);color:var(–green);
+animation:btnArmedGreen 1s ease-in-out infinite;
 }
-@keyframes btnArmed{0%,100%{box-shadow:0 0 6px rgba(255,32,32,0.3)}50%{box-shadow:0 0 16px rgba(255,32,32,0.7)}}
+@keyframes btnArmedGreen{0%,100%{box-shadow:0 0 6px rgba(32,255,96,0.3)}50%{box-shadow:0 0 18px rgba(32,255,96,0.8)}}
 .hud-btn:disabled{opacity:0.3;cursor:default;pointer-events:none}
 
-/* ── BOTTOM BAR ── */
-#botbar{
-position:absolute;bottom:0;left:0;right:0;height:36px;
-background:linear-gradient(to top,rgba(0,0,0,0.65),transparent);
-display:flex;align-items:center;justify-content:space-between;
-padding:0 18px;z-index:15;border-top:1px solid rgba(255,255,255,0.07);
-}
+#botbar{position:absolute;bottom:0;left:0;right:0;height:36px;background:linear-gradient(to top,rgba(0,0,0,0.65),transparent);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:15;border-top:1px solid rgba(255,255,255,0.07);}
 .coords{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1.5px}
 
-/* ── TERMINAL ── */
-#terminal{
-position:absolute;bottom:44px;left:15px;
-width:300px;max-height:200px;overflow:hidden;
-z-index:15;pointer-events:none;
-}
-.log-entry{
-font-size:10px;letter-spacing:1.5px;line-height:1.8;
-text-transform:uppercase;color:rgba(255,255,255,0.5);
-display:flex;gap:8px;align-items:baseline;animation:fadeIn 0.3s ease;
-}
+#terminal{position:absolute;bottom:44px;left:15px;width:300px;max-height:200px;overflow:hidden;z-index:15;pointer-events:none;}
+.log-entry{font-size:10px;letter-spacing:1.5px;line-height:1.8;text-transform:uppercase;color:rgba(255,255,255,0.5);display:flex;gap:8px;align-items:baseline;animation:fadeIn 0.3s ease;}
 .log-entry.threat{color:var(–red)}
 .log-entry.info{color:rgba(255,255,255,0.6)}
-.log-entry.voice{color:rgba(80,255,120,0.9)}
-.log-entry.geo{color:rgba(80,200,255,0.9)}
-.log-entry.gyro{color:rgba(180,130,255,0.9)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1}}
 .log-ts{color:rgba(255,255,255,0.2);flex-shrink:0}
 .log-prefix{color:rgba(255,255,255,0.25)}
-#cursor{
-display:inline-block;width:7px;height:12px;
-background:rgba(255,255,255,0.5);
-animation:blink 0.8s steps(1) infinite;
-vertical-align:middle;margin-left:2px;
-}
+#cursor{display:inline-block;width:7px;height:12px;background:rgba(255,255,255,0.5);animation:blink 0.8s steps(1) infinite;vertical-align:middle;margin-left:2px;}
 @keyframes blink{50%{opacity:0}}
 
-/* ── STATUS PANEL ── */
-#statusPanel{
-position:absolute;top:15px;right:15px;
-width:188px;z-index:15;display:flex;flex-direction:column;gap:5px;
-}
-.sp-row{
-display:flex;justify-content:space-between;align-items:center;
-border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;
-}
+#statusPanel{position:absolute;top:15px;right:15px;width:188px;z-index:15;display:flex;flex-direction:column;gap:5px;}
+.sp-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;}
 .sp-key{font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3)}
 .sp-val{font-family:var(–mono);font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:1px}
 .sp-val.active{color:var(–red);text-shadow:0 0 8px var(–red)}
@@ -131,35 +73,13 @@ border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;
 .bar-fill{height:100%;background:rgba(255,255,255,0.5);transition:width 0.3s}
 .bar-fill.danger{background:var(–red);box-shadow:0 0 6px var(–red)}
 
-/* ── SENSOR STRIP (top-center) ── */
-#sensorStrip{
-position:absolute;top:12px;left:50%;transform:translateX(-50%);
-z-index:15;display:none;flex-direction:row;gap:5px;align-items:center;
-}
-.sens-pill{
-background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.18);
-font-family:var(–mono);font-size:8px;letter-spacing:1px;
-color:rgba(255,255,255,0.45);padding:3px 8px;white-space:nowrap;
-}
+#sensorStrip{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:15;display:none;flex-direction:row;gap:5px;align-items:center;}
+.sens-pill{background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.18);font-family:var(–mono);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,0.45);padding:3px 8px;white-space:nowrap;}
 .sens-pill.ok{border-color:rgba(80,255,120,0.5);color:rgba(80,255,120,0.85)}
 .sens-pill.warn{border-color:rgba(255,200,0,0.5);color:rgba(255,200,0,0.85)}
 .sens-pill.err{border-color:rgba(255,32,32,0.5);color:rgba(255,32,32,0.7)}
 
-/* ── GYRO HORIZON ── */
-#gyroCanvas{
-position:absolute;top:40px;left:50%;transform:translateX(-50%);
-z-index:14;opacity:0.7;pointer-events:none;display:none;
-}
-
-/* ── START BUTTON ── */
-#startBtn{
-position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-background:none;border:none;color:#fff;
-font-family:var(–sans);font-size:11px;font-weight:700;
-letter-spacing:5px;text-transform:uppercase;
-cursor:pointer;z-index:20;outline:none;padding:0;
--webkit-tap-highlight-color:transparent;
-}
+#startBtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:none;border:none;color:#fff;font-family:var(–sans);font-size:11px;font-weight:700;letter-spacing:5px;text-transform:uppercase;cursor:pointer;z-index:20;outline:none;padding:0;-webkit-tap-highlight-color:transparent;}
 #startBtn .btn-inner{display:flex;flex-direction:column;align-items:center;gap:20px}
 #startBtn .btn-ring{width:80px;height:80px;position:relative;display:flex;align-items:center;justify-content:center}
 .ring-svg{position:absolute;inset:0;animation:spinRing 4s linear infinite}
@@ -169,181 +89,70 @@ cursor:pointer;z-index:20;outline:none;padding:0;
 #startBtn:hover .btn-text{opacity:1}
 #startBtn:hover .ring-svg{animation-duration:1.5s}
 
-/* ── EW ALERT ── */
-#ewAlert{
-position:absolute;top:15px;right:215px;
-font-family:var(–sans);font-size:9px;font-weight:700;
-letter-spacing:3px;color:var(–red);
-opacity:0;transition:opacity 0.2s;z-index:15;text-transform:uppercase;
-}
+#ewAlert{position:absolute;top:15px;right:215px;font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:3px;color:var(–red);opacity:0;transition:opacity 0.2s;z-index:15;text-transform:uppercase;}
 #ewAlert.show{opacity:1}
 
-/* ── THREAT BOX ── */
-#threatBox{
-position:absolute;top:50%;right:15px;transform:translateY(-50%);
-z-index:15;width:170px;opacity:0;transition:opacity 0.4s;
-}
+#threatBox{position:absolute;top:50%;right:15px;transform:translateY(-50%);z-index:15;width:170px;opacity:0;transition:opacity 0.4s;}
 #threatBox.show{opacity:1}
-.tb-header{
-font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:3px;color:var(–red);
-border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:6px;margin-bottom:8px;text-transform:uppercase;
-}
+.tb-header{font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:3px;color:var(–red);border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:6px;margin-bottom:8px;text-transform:uppercase;}
 .tbi{font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:1px;line-height:2}
 .tbi-key{color:rgba(255,255,255,0.3);font-size:9px}
 
-/* ══════════════════════════════════════════
-CAPTURE CARD
-══════════════════════════════════════════ */
-#captureCard{
-position:absolute;top:14px;left:14px;z-index:20;display:flex;
-opacity:0;pointer-events:none;transition:opacity 0.3s ease;
-filter:drop-shadow(0 0 8px rgba(255,32,32,0.3));
-}
+#captureCard{position:absolute;top:14px;left:14px;z-index:20;display:flex;opacity:0;pointer-events:none;transition:opacity 0.3s ease;filter:drop-shadow(0 0 8px rgba(255,32,32,0.3));}
 #captureCard.show{opacity:1;pointer-events:auto}
-#portraitWrap{
-position:relative;width:130px;height:130px;flex-shrink:0;
-background:#000;border:1px solid rgba(255,32,32,0.5);overflow:hidden;
-}
-#portraitCanvas{width:100%;height:100%;display:block;
-filter:brightness(1.1) contrast(1.25) saturate(0.12) hue-rotate(180deg)}
+#portraitWrap{position:relative;width:130px;height:130px;flex-shrink:0;background:#000;border:1px solid rgba(255,32,32,0.5);overflow:hidden;}
+#portraitCanvas{width:100%;height:100%;display:block;filter:brightness(1.1) contrast(1.25) saturate(0.12) hue-rotate(180deg)}
 .pcorner{position:absolute;width:9px;height:9px;border-color:var(–red);border-style:solid;z-index:2}
 .pcorner.tl{top:3px;left:3px;border-width:1.5px 0 0 1.5px}
 .pcorner.tr{top:3px;right:3px;border-width:1.5px 1.5px 0 0}
 .pcorner.bl{bottom:3px;left:3px;border-width:0 0 1.5px 1.5px}
 .pcorner.br{bottom:3px;right:3px;border-width:0 1.5px 1.5px 0}
-#pScanlines{
-position:absolute;inset:0;pointer-events:none;z-index:3;
-background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.22) 2px,rgba(0,0,0,0.22) 3px);
-}
+#pScanlines{position:absolute;inset:0;pointer-events:none;z-index:3;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.22) 2px,rgba(0,0,0,0.22) 3px);}
 #pCross{position:absolute;inset:0;z-index:4;pointer-events:none;display:flex;align-items:center;justify-content:center}
 #pCross::before{content:’’;width:16px;height:16px;border:1px solid rgba(255,32,32,0.5);border-radius:50%}
-#pStamp{
-position:absolute;bottom:4px;left:4px;right:4px;z-index:5;
-font-size:7px;font-family:var(–mono);color:rgba(255,32,32,0.65);
-letter-spacing:0.8px;display:flex;justify-content:space-between;
-}
-#capturedFlash{
-position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
-font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;
-color:var(–red);text-transform:uppercase;opacity:0;pointer-events:none;
-}
+#pStamp{position:absolute;bottom:4px;left:4px;right:4px;z-index:5;font-size:7px;font-family:var(–mono);color:rgba(255,32,32,0.65);letter-spacing:0.8px;display:flex;justify-content:space-between;}
+#capturedFlash{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;color:var(–red);text-transform:uppercase;opacity:0;pointer-events:none;}
 #capturedFlash.flash{animation:capFlash 0.9s ease forwards}
 @keyframes capFlash{0%{opacity:1}60%{opacity:0.7}100%{opacity:0}}
-#captureMeta{
-width:158px;background:rgba(0,0,0,0.85);
-border:1px solid rgba(255,32,32,0.25);border-left:none;
-padding:7px 9px;display:flex;flex-direction:column;
-}
-.cm-header{
-font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:3px;color:var(–red);
-border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:5px;margin-bottom:5px;
-text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;
-}
+#captureMeta{width:158px;background:rgba(0,0,0,0.85);border:1px solid rgba(255,32,32,0.25);border-left:none;padding:7px 9px;display:flex;flex-direction:column;}
+.cm-header{font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:3px;color:var(–red);border-bottom:1px solid rgba(255,32,32,0.3);padding-bottom:5px;margin-bottom:5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;}
 .cm-blink{width:5px;height:5px;border-radius:50%;background:var(–red);animation:blink 0.6s steps(1) infinite}
-.cm-row{
-display:flex;justify-content:space-between;align-items:baseline;
-border-bottom:1px solid rgba(255,255,255,0.04);padding:2.5px 0;
-}
-.cm-key{
-font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:1.8px;
-color:rgba(255,255,255,0.25);text-transform:uppercase;flex-shrink:0;
-}
+.cm-row{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.04);padding:2.5px 0;}
+.cm-key{font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:1.8px;color:rgba(255,255,255,0.25);text-transform:uppercase;flex-shrink:0;}
 .cm-val{font-family:var(–mono);font-size:9px;color:rgba(255,255,255,0.65);letter-spacing:0.8px;text-align:right}
 .cm-val.red{color:var(–red);text-shadow:0 0 5px var(–red)}
 
-/* ══════════════════════════════════════════
-TOOLBAR  —  series button only
-══════════════════════════════════════════ */
-#toolbar{
-position:absolute;bottom:44px;right:15px;
-z-index:20;display:none;flex-direction:column;align-items:flex-end;gap:6px;
-}
-#seriesBadge{
-font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:2px;
-color:var(–red);text-transform:uppercase;display:none;
-text-shadow:0 0 6px rgba(255,32,32,0.5);text-align:right;
-}
+/* FILTER BUTTON — toolbar */
+#toolbar{position:absolute;bottom:44px;right:15px;z-index:20;display:none;flex-direction:column;align-items:flex-end;gap:6px;}
+#filterBadge{font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:2px;color:var(–green);text-transform:uppercase;display:none;text-shadow:0 0 6px rgba(32,255,96,0.6);text-align:right;}
 
-/* ══════════════════════════════════════════
-PDF EXPORT POPUP  — full redesign
-══════════════════════════════════════════ */
-#pdfOverlay{
-position:absolute;inset:0;z-index:40;
-background:rgba(0,0,0,0.6);
-display:none;align-items:center;justify-content:center;
-backdrop-filter:blur(2px);
-}
+/* PDF EXPORT POPUP */
+#pdfOverlay{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
 #pdfOverlay.show{display:flex}
-#pdfBox{
-background:rgba(0,0,0,0.92);
-border:1px solid rgba(255,255,255,1);
-padding:28px 32px;
-min-width:260px;
-display:flex;flex-direction:column;gap:14px;
-align-items:stretch;
-}
-#pdfBox .pb-eyebrow{
-font-family:var(–sans);font-size:8px;font-weight:700;
-letter-spacing:4px;color:var(–red);text-transform:uppercase;
-}
-#pdfBox .pb-title{
-font-family:var(–sans);font-size:14px;font-weight:700;
-letter-spacing:3px;color:#fff;text-transform:uppercase;
-border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:10px;
-}
-#pdfBox .pb-sub{
-font-family:var(–mono);font-size:9px;
-color:rgba(255,255,255,0.45);letter-spacing:2px;
-}
-#pdfBox .pb-bar-wrap{
-width:100%;height:2px;background:rgba(255,255,255,0.1);
-}
-#pdfBox .pb-bar-fill{
-height:100%;background:#fff;
-transition:width 0.2s ease;width:0%;
-}
-#pdfBox .pb-count{
-font-family:var(–mono);font-size:10px;
-color:rgba(255,255,255,0.5);letter-spacing:1px;text-align:right;
-}
-/* PDF action buttons row */
-#pdfBox .pb-actions{
-display:flex;gap:8px;flex-direction:column;
-margin-top:4px;
-}
+#pdfBox{background:rgba(0,0,0,0.92);border:1px solid rgba(255,255,255,1);padding:28px 32px;min-width:260px;display:flex;flex-direction:column;gap:14px;align-items:stretch;}
+#pdfBox .pb-eyebrow{font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:4px;color:var(–red);text-transform:uppercase;}
+#pdfBox .pb-title{font-family:var(–sans);font-size:14px;font-weight:700;letter-spacing:3px;color:#fff;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:10px;}
+#pdfBox .pb-sub{font-family:var(–mono);font-size:9px;color:rgba(255,255,255,0.45);letter-spacing:2px;}
+#pdfBox .pb-bar-wrap{width:100%;height:2px;background:rgba(255,255,255,0.1);}
+#pdfBox .pb-bar-fill{height:100%;background:#fff;transition:width 0.2s ease;width:0%;}
+#pdfBox .pb-count{font-family:var(–mono);font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px;text-align:right;}
+#pdfBox .pb-actions{display:flex;gap:8px;flex-direction:column;margin-top:4px;}
 
-/* TAP HINT */
-#tapHint{
-position:absolute;bottom:120px;left:50%;transform:translateX(-50%);
-font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;
-text-transform:uppercase;color:rgba(255,255,255,0.32);
-z-index:15;pointer-events:none;opacity:0;transition:opacity 0.4s;
-white-space:nowrap;animation:hintPulse 2s ease-in-out infinite;
-}
+#tapHint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);font-family:var(–sans);font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,0.32);z-index:15;pointer-events:none;opacity:0;transition:opacity 0.4s;white-space:nowrap;animation:hintPulse 2s ease-in-out infinite;}
 #tapHint.show{opacity:1}
 @keyframes hintPulse{0%,100%{opacity:0.32}50%{opacity:0.65}}
 #tapHint::before{content:’[ ‘;color:var(–red)}
 #tapHint::after{content:’ ]’;color:var(–red)}
 
-/* SCREEN FLASH */
 #flashOverlay{position:absolute;inset:0;z-index:50;background:rgba(255,255,255,0);pointer-events:none}
 #flashOverlay.flash{animation:scrFlash 0.25s ease forwards}
 @keyframes scrFlash{0%{background:rgba(255,255,255,0.18)}100%{background:rgba(255,255,255,0)}}
 
-/* CACHE INDICATOR */
-#cacheIndicator{
-position:absolute;top:15px;left:15px;z-index:15;
-font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:2px;
-color:rgba(255,255,255,0.2);text-transform:uppercase;display:none;
-}
+#cacheIndicator{position:absolute;top:15px;left:15px;z-index:15;font-family:var(–sans);font-size:8px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.2);text-transform:uppercase;display:none;}
 #cacheIndicator.loaded{color:rgba(80,255,120,0.45)}
 </style>
 
 </head>
-
-<!-- ═══════════════════════  WEBGL SHADERS  ═══════════════════════ -->
-
-<!-- Vertex shader: full-screen quad -->
 
 <script id="vs-src" type="x-shader/x-vertex">
 attribute vec2 aPos;
@@ -355,23 +164,23 @@ void main(){
 }
 </script>
 
-<!-- Fragment shader: edge-detection + EW glitch + colour grade -->
+<!-- Fragment shader: edge-detection + optional green filter + EW glitch -->
 
 <script id="fs-src" type="x-shader/x-fragment">
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uTex;
 uniform float uTime;
-uniform float uEw;          /* 0..1  EW intensity           */
-uniform float uLock;        /* 0..1  lock factor            */
-uniform vec3  uColor;       /* reticle dominant colour      */
+uniform float uEw;
+uniform float uLock;
+uniform vec3  uColor;
+uniform float uGreenFilter; /* 0 = off, 1 = green night-vision filter */
 
 float rand(vec2 s){ return fract(sin(dot(s,vec2(12.9898,78.233)))*43758.5453); }
 
 void main(){
   vec2 uv = vUv;
 
-  /* ── EW glitch horizontal shift ── */
   if(uEw > 0.05){
     float r = rand(vec2(uTime*0.3, floor(uv.y*80.0)/80.0));
     if(r > 0.88) uv.x += (rand(vec2(uTime,uv.y)) - 0.5) * 0.06 * uEw;
@@ -379,7 +188,6 @@ void main(){
 
   vec4 tex = texture2D(uTex, uv);
 
-  /* ── Sobel edge detection ── */
   float px = 0.0015, py = 0.0025;
   float tl=texture2D(uTex,uv+vec2(-px, py)).g;
   float tc=texture2D(uTex,uv+vec2(  0, py)).g;
@@ -393,19 +201,25 @@ void main(){
   float gy = -tl - 2.0*tc - tr + bl + 2.0*bc  + brr;
   float edge = clamp(sqrt(gx*gx + gy*gy) * 3.0, 0.0, 1.0);
 
-  /* ── Colour grade ──
-       base: very dark original
-       edges: tinted with uColor (changes with threat/lock state)
-  */
   vec3 base  = tex.rgb * 0.12;
   vec3 eCol  = uColor * edge;
-
-  /* Locked state: boost brightness slightly */
   base += tex.rgb * 0.06 * uLock;
 
-  /* ── EW noise overlay ── */
+  /* Green night-vision filter */
+  if(uGreenFilter > 0.5){
+    float luma = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
+    /* Phosphor green tint — brighter signal on edges */
+    float glow = luma * 0.55 + edge * 0.6;
+    float noise = rand(uv + uTime * 0.7) * 0.04;
+    vec3 greenBase = vec3(glow * 0.08, glow * 0.95 + noise, glow * 0.12);
+    /* Subtle scan-line darkening */
+    float scanline = 1.0 - 0.08 * step(0.5, fract(uv.y * 240.0));
+    gl_FragColor = vec4(greenBase * scanline, 1.0);
+    return;
+  }
+
   float noise = rand(uv + uTime) * 0.12 * uEw;
-  vec3 nCol = vec3(noise * 0.4, noise * 0.9, noise * 0.5); /* greenish noise */
+  vec3 nCol = vec3(noise * 0.4, noise * 0.9, noise * 0.5);
 
   gl_FragColor = vec4(base + eCol + nCol, 1.0);
 }
@@ -413,8 +227,6 @@ void main(){
 
 <body>
 <div id="container">
-
-<!-- START BUTTON -->
 
 <button id="startBtn">
   <div class="btn-inner">
@@ -442,20 +254,10 @@ void main(){
 <div id="vignette"></div>
 <div id="scanlines"></div>
 
-<!-- SENSOR STRIP -->
-
 <div id="sensorStrip">
-  <div class="sens-pill" id="pillGeo">GPS —</div>
-  <div class="sens-pill" id="pillMic">MIC —</div>
-  <div class="sens-pill" id="pillGyro">GYRO —</div>
+  <div class="sens-pill" id="pillCam">CAM —</div>
   <div class="sens-pill" id="pillNN">NN: COCO</div>
 </div>
-
-<!-- GYRO HORIZON -->
-
-<canvas id="gyroCanvas" width="160" height="50"></canvas>
-
-<!-- CAPTURE CARD -->
 
 <div id="captureCard">
   <div id="portraitWrap">
@@ -475,20 +277,12 @@ void main(){
   </div>
 </div>
 
-<!-- TAP HINT -->
-
 <div id="tapHint">TAP TO CAPTURE</div>
 
-<!-- TOOLBAR — series button only -->
-
 <div id="toolbar">
-  <div id="seriesBadge"></div>
-  <button class="hud-btn" id="seriesBtn">◉ SERIES</button>
+  <div id="filterBadge">◈ NV FILTER ON</div>
+  <button class="hud-btn" id="filterBtn">◈ NV FILTER</button>
 </div>
-
-<!-- ══════════════════════════════════════════
-     PDF EXPORT POPUP
-══════════════════════════════════════════ -->
 
 <div id="pdfOverlay">
   <div id="pdfBox">
@@ -504,8 +298,6 @@ void main(){
   </div>
 </div>
 
-<!-- STATUS PANEL -->
-
 <div id="statusPanel" style="display:none">
   <div class="sp-row"><span class="sp-key">network</span><span class="sp-val active">ONLINE</span></div>
   <div class="sp-row"><span class="sp-key">model</span><span class="sp-val" id="modelStat">LOADING</span></div>
@@ -516,8 +308,7 @@ void main(){
   <div class="sp-row"><span class="sp-key">ew</span><div class="bar-wrap"><div class="bar-fill" id="ewBar" style="width:0%"></div></div></div>
   <div class="sp-row"><span class="sp-key">captures</span><span class="sp-val" id="captureStat">0</span></div>
   <div class="sp-row"><span class="sp-key">cache</span><span class="sp-val" id="cacheStat">0</span></div>
-  <div class="sp-row"><span class="sp-key">gps</span><span class="sp-val" id="gpsStat">—</span></div>
-  <div class="sp-row"><span class="sp-key">hdg</span><span class="sp-val" id="gyroStat">—</span></div>
+  <div class="sp-row"><span class="sp-key">filter</span><span class="sp-val" id="filterStat">OFF</span></div>
 </div>
 
 <div id="ewAlert">⚠ EW INTERFERENCE</div>
@@ -525,23 +316,16 @@ void main(){
 <div id="terminal"><span id="cursor"></span></div>
 
 <div id="botbar" style="display:none">
-  <span class="coords" id="coordsL">LAT 00°00'00"N  LON 000°00'00"E</span>
-  <span class="coords" id="coordsR">ALT --m  HDG --°  PITCH --°</span>
+  <span class="coords" id="coordsL">myFIX // TACTICAL VISION</span>
+  <span class="coords" id="coordsR" id="coordsR">SYS READY</span>
 </div>
 <div id="cacheIndicator">◈ CACHE READY</div>
 
-<!-- VIDEO hidden (WebGL reads it as texture) -->
-
 <video id="video" autoplay playsinline muted webkit-playsinline></video>
-
-<!-- GL canvas behind everything, HUD canvas on top -->
-
 <canvas id="glCanvas"></canvas>
 <canvas id="hudCanvas"></canvas>
 
 </div>
-
-<!-- LIBS -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -552,21 +336,19 @@ void main(){
 <script>
 'use strict';
 
-/* ════════════════════════════════════════════
-   PERFORMANCE FLAGS
-════════════════════════════════════════════ */
 const IS_IOS     = /iPad|iPhone|iPod/.test(navigator.userAgent);
 const IS_ANDROID = /Android/.test(navigator.userAgent);
 const IS_MOBILE  = IS_IOS||IS_ANDROID;
-const DETECT_INTERVAL        = IS_MOBILE?120:80;
-const EFF_DPR                = IS_MOBILE?Math.min(devicePixelRatio,2):devicePixelRatio;
-const EW_PARTICLES           = IS_MOBILE?4:12;
-const USE_SHADOW             = !IS_MOBILE;
-const SERIES_INTERVAL_FRAMES = IS_MOBILE?40:25;
+const DETECT_INTERVAL = IS_MOBILE?120:80;
+const EFF_DPR         = IS_MOBILE?Math.min(devicePixelRatio,2):devicePixelRatio;
+const EW_PARTICLES    = IS_MOBILE?4:12;
+const USE_SHADOW      = !IS_MOBILE;
 
-/* ════════════════════════════════════════════
-   INDEXEDDB CACHE
-════════════════════════════════════════════ */
+/* Threat classifier — people & cars: HIGH (red), others: MED (yellow) */
+const T_HIGH = new Set(['person','car','truck','bus','motorcycle','airplane','boat','train']);
+function getThreat(cls){return T_HIGH.has(cls)?'HIGH':'MED';}
+
+/* IndexedDB */
 const DB_NAME='myfix_cache',DB_VER=1,STORE_CAPS='captures';
 let db=null;
 function openDB(){return new Promise((res,rej)=>{
@@ -577,16 +359,7 @@ function openDB(){return new Promise((res,rej)=>{
 function dbSave(rec){if(!db)return Promise.resolve(null);return new Promise((res,rej)=>{const tx=db.transaction(STORE_CAPS,'readwrite');const r=tx.objectStore(STORE_CAPS).add(rec);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
 function dbCount(){if(!db)return Promise.resolve(0);return new Promise(res=>{const tx=db.transaction(STORE_CAPS,'readonly');const r=tx.objectStore(STORE_CAPS).count();r.onsuccess=()=>res(r.result);r.onerror=()=>res(0);});}
 
-/* ════════════════════════════════════════════
-   THREAT CLASSIFIER
-════════════════════════════════════════════ */
-const T_HIGH=new Set(['person','car','truck','bus','motorcycle','airplane','boat','train']);
-const T_MED=new Set(['bicycle','horse','cow','dog','cat','bird','sheep','bear','elephant','zebra','giraffe']);
-function getThreat(cls){if(T_HIGH.has(cls))return'HIGH';if(T_MED.has(cls))return'MED';return'LOW';}
-
-/* ════════════════════════════════════════════
-   DOM REFS
-════════════════════════════════════════════ */
+/* DOM */
 const video      = document.getElementById('video');
 const glCanvas   = document.getElementById('glCanvas');
 const hudCanvas  = document.getElementById('hudCanvas');
@@ -599,8 +372,8 @@ const portCanvas = document.getElementById('portraitCanvas');
 const portCtx    = portCanvas.getContext('2d');
 const tapHint    = document.getElementById('tapHint');
 const flashOv    = document.getElementById('flashOverlay');
-const seriesBtn  = document.getElementById('seriesBtn');
-const seriesBadge= document.getElementById('seriesBadge');
+const filterBtn  = document.getElementById('filterBtn');
+const filterBadge= document.getElementById('filterBadge');
 const pdfOverlay = document.getElementById('pdfOverlay');
 const pdfSub     = document.getElementById('pdfSub');
 const pdfBarFill = document.getElementById('pdfBarFill');
@@ -609,46 +382,26 @@ const pdfActions = document.getElementById('pdfActions');
 const pdfDownBtn = document.getElementById('pdfDownBtn');
 const pdfCloseBtn= document.getElementById('pdfCloseBtn');
 const cacheInd   = document.getElementById('cacheIndicator');
-const gyroCanv   = document.getElementById('gyroCanvas');
-const gyroCtx    = gyroCanv.getContext('2d');
-const pillGeo    = document.getElementById('pillGeo');
-const pillMic    = document.getElementById('pillMic');
-const pillGyro   = document.getElementById('pillGyro');
+const pillCam    = document.getElementById('pillCam');
 const pillNN     = document.getElementById('pillNN');
 
-/* ════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════ */
-let model,allPredictions=[],primaryTarget=null;
+/* State */
+let model, allPredictions=[], primaryTarget=null;
 let currentPos={x:innerWidth/2,y:innerHeight/2};
 let targetPos={x:innerWidth/2,y:innerHeight/2,active:false};
-let isLocked=false,lockFactor=0;
-let pulseTime=0,scanAngle=0,textTick=0;
-let infoLines=[],glitchActive=0;
-let captureCount=0,cardVisible=false;
-let ewIntensity=0,ewTimer=0;
+let isLocked=false, lockFactor=0;
+let pulseTime=0, scanAngle=0, textTick=0;
+let infoLines=[], glitchActive=0;
+let captureCount=0, cardVisible=false;
+let ewIntensity=0, ewTimer=0;
+let greenFilterOn=false;
 
-/* Sensors */
-let gpsLat=null,gpsLon=null,gpsAlt=null,gpsAcc=null,gpsReal=false;
-let gyroAlpha=0,gyroBeta=0,gyroGamma=0,gyroActive=false;
-let micActive=false,recognition=null;
-let fakeLat=55.7558+(Math.random()-0.5)*0.01;
-let fakeLon=37.6173+(Math.random()-0.5)*0.01;
-
-/* Series */
-let seriesActive=false,seriesCaptures=[],seriesThrottle=0;
-
-/* Extra models */
-let extraModels=[];
-
-/* WebGL state */
-let gl=null,glProgram=null,glTexture=null;
-let uTime=null,uEw=null,uLock=null,uColor=null;
+/* WebGL */
+let gl=null, glProgram=null, glTexture=null;
+let uTime=null, uEw=null, uLock=null, uColor=null, uGreenFilter=null;
 let glReady=false;
 
-/* ════════════════════════════════════════════
-   TERMINAL
-════════════════════════════════════════════ */
+/* Terminal */
 function ts(){const n=new Date();return`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;}
 const logQ=[];let logBusy=false;
 async function typeLog(msg,cls='info'){await new Promise(res=>{logQ.push({msg,cls,res});if(!logBusy)drainLog();});}
@@ -673,17 +426,13 @@ function logInstant(msg,cls='info'){
   while(terminal.querySelectorAll('.log-entry').length>14)terminal.removeChild(terminal.querySelector('.log-entry'));
 }
 
-/* ════════════════════════════════════════════
-   WEBGL — edge-detection shader pipeline
-════════════════════════════════════════════ */
+/* WebGL */
 function initWebGL(){
   gl=glCanvas.getContext('webgl',{alpha:false,antialias:false,preserveDrawingBuffer:false});
-  if(!gl){typeLog('WEBGL NOT SUPPORTED — FALLBACK','threat');return;}
-
+  if(!gl){typeLog('WEBGL NOT SUPPORTED','threat');return;}
   function compileShader(type,src){
-    const s=gl.createShader(type);
-    gl.shaderSource(s,src);gl.compileShader(s);
-    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(s));}
+    const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));
     return s;
   }
   const vs=compileShader(gl.VERTEX_SHADER,  document.getElementById('vs-src').text);
@@ -691,189 +440,68 @@ function initWebGL(){
   glProgram=gl.createProgram();
   gl.attachShader(glProgram,vs);gl.attachShader(glProgram,fs);
   gl.linkProgram(glProgram);gl.useProgram(glProgram);
-
-  /* Full-screen quad */
-  const buf=gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
-  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]),gl.STATIC_DRAW);
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
   const aPos=gl.getAttribLocation(glProgram,'aPos');
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
-
-  /* Uniforms */
-  uTime  = gl.getUniformLocation(glProgram,'uTime');
-  uEw    = gl.getUniformLocation(glProgram,'uEw');
-  uLock  = gl.getUniformLocation(glProgram,'uLock');
-  uColor = gl.getUniformLocation(glProgram,'uColor');
-
-  /* Video texture */
-  glTexture=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,glTexture);
+  gl.enableVertexAttribArray(aPos);gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+  uTime        =gl.getUniformLocation(glProgram,'uTime');
+  uEw          =gl.getUniformLocation(glProgram,'uEw');
+  uLock        =gl.getUniformLocation(glProgram,'uLock');
+  uColor       =gl.getUniformLocation(glProgram,'uColor');
+  uGreenFilter =gl.getUniformLocation(glProgram,'uGreenFilter');
+  glTexture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,glTexture);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.uniform1i(gl.getUniformLocation(glProgram,'uTex'),0);
-
-  glReady=true;
-  renderGL();
+  glReady=true;renderGL();
 }
-
-function resizeGL(){
-  glCanvas.width  = Math.round(innerWidth  * Math.min(devicePixelRatio,2));
-  glCanvas.height = Math.round(innerHeight * Math.min(devicePixelRatio,2));
-}
-
+function resizeGL(){glCanvas.width=Math.round(innerWidth*Math.min(devicePixelRatio,2));glCanvas.height=Math.round(innerHeight*Math.min(devicePixelRatio,2));}
 function renderGL(){
   requestAnimationFrame(renderGL);
   if(!glReady||video.readyState<2)return;
-
-  resizeGL();
-  gl.viewport(0,0,glCanvas.width,glCanvas.height);
-
-  /* Upload current video frame as texture */
+  resizeGL();gl.viewport(0,0,glCanvas.width,glCanvas.height);
   gl.bindTexture(gl.TEXTURE_2D,glTexture);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,video);
-
-  /* Pass uniforms */
-  gl.uniform1f(uTime,  performance.now()*0.001);
-  gl.uniform1f(uEw,    Math.min(ewIntensity/20,1));
-  gl.uniform1f(uLock,  lockFactor);
-
-  /* Shader edge colour follows lock state / threat */
+  gl.uniform1f(uTime,performance.now()*0.001);
+  gl.uniform1f(uEw,Math.min(ewIntensity/20,1));
+  gl.uniform1f(uLock,lockFactor);
+  gl.uniform1f(uGreenFilter,greenFilterOn?1.0:0.0);
   const tier=primaryTarget?getThreat(primaryTarget.class.toLowerCase()):null;
   let cr=0.8,cg=0.85,cb=1.0;
-  if(isLocked){
-    if(tier==='HIGH'){cr=1.0;cg=0.08;cb=0.08;}
-    else if(tier==='MED'){cr=1.0;cg=0.55;cb=0.0;}
-    else{cr=1.0;cg=0.86;cb=0.2;}
-  }
-  if(seriesActive){cr=Math.min(1,cr+0.2);cg*=0.7;}
+  if(isLocked){if(tier==='HIGH'){cr=1.0;cg=0.08;cb=0.08;}else{cr=1.0;cg=0.86;cb=0.2;}}
   gl.uniform3f(uColor,cr,cg,cb);
-
   gl.drawArrays(gl.TRIANGLES,0,6);
 }
 
-/* ════════════════════════════════════════════
-   GEOLOCATION
-════════════════════════════════════════════ */
-function initGeo(){
-  if(!navigator.geolocation){pillGeo.textContent='GPS N/A';pillGeo.className='sens-pill err';typeLog('GPS: NOT SUPPORTED','threat');return;}
-  pillGeo.textContent='GPS WAIT';pillGeo.className='sens-pill warn';
-  navigator.geolocation.watchPosition(
-    pos=>{
-      gpsLat=pos.coords.latitude;gpsLon=pos.coords.longitude;
-      gpsAlt=pos.coords.altitude||null;gpsAcc=Math.round(pos.coords.accuracy);gpsReal=true;
-      pillGeo.textContent=`GPS ±${gpsAcc}m`;pillGeo.className='sens-pill ok';
-      document.getElementById('gpsStat').textContent=`${gpsLat.toFixed(4)}°`;
-      document.getElementById('gpsStat').className='sp-val ok';
-      updateCoordsBar();
-    },
-    err=>{pillGeo.textContent='GPS ERR';pillGeo.className='sens-pill err';typeLog(`GPS ERR: ${err.message.slice(0,30)}`,'threat');},
-    {enableHighAccuracy:true,maximumAge:2000,timeout:10000}
-  );
-}
-function getLat(){return gpsReal?gpsLat:fakeLat;}
-function getLon(){return gpsReal?gpsLon:fakeLon;}
-setInterval(()=>{fakeLat+=(Math.random()-0.5)*0.00005;fakeLon+=(Math.random()-0.5)*0.00005;if(!gpsReal)updateCoordsBar();},1500);
-function updateCoordsBar(){
-  const la=getLat(),lo=getLon();
-  const f=v=>`${Math.floor(Math.abs(v))}°${String(Math.floor((Math.abs(v)%1)*60)).padStart(2,'0')}'${String(((Math.abs(v)%1*60)%1*60)|0).padStart(2,'0')}"`;
-  document.getElementById('coordsL').textContent=`LAT ${f(la)}${la>0?'N':'S'}  LON ${f(lo)}${lo>0?'E':'W'}`;
-  const alt=gpsAlt?Math.round(gpsAlt):180+Math.round(Math.sin(Date.now()/7000)*5);
-  const hdg=Math.round(gyroAlpha)||((360+Math.round(45+Math.sin(Date.now()/10000)*20))%360);
-  document.getElementById('coordsR').textContent=`ALT ${alt}m  HDG ${hdg}°  PITCH ${Math.round(gyroBeta)||0}°`;
-}
-
-/* ════════════════════════════════════════════
-   GYROSCOPE
-════════════════════════════════════════════ */
-async function initGyro(){
-  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
-    try{const p=await DeviceOrientationEvent.requestPermission();if(p!=='granted'){pillGyro.textContent='GYRO DENIED';pillGyro.className='sens-pill err';return;}}
-    catch{pillGyro.textContent='GYRO ERR';pillGyro.className='sens-pill err';return;}
+/* Filter button */
+filterBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  greenFilterOn=!greenFilterOn;
+  if(greenFilterOn){
+    filterBtn.classList.add('armed');filterBtn.textContent='◈ NV OFF';
+    filterBadge.style.display='block';
+    document.getElementById('filterStat').textContent='ON';
+    document.getElementById('filterStat').className='sp-val ok';
+    typeLog('NV FILTER ACTIVE','info');
+  }else{
+    filterBtn.classList.remove('armed');filterBtn.textContent='◈ NV FILTER';
+    filterBadge.style.display='none';
+    document.getElementById('filterStat').textContent='OFF';
+    document.getElementById('filterStat').className='sp-val';
+    typeLog('NV FILTER OFF','info');
   }
-  if(!window.DeviceOrientationEvent){pillGyro.textContent='GYRO N/A';pillGyro.className='sens-pill err';return;}
-  window.addEventListener('deviceorientation',onOrientation,true);
-  pillGyro.textContent='GYRO OK';pillGyro.className='sens-pill ok';gyroActive=true;
-  gyroCanv.style.display='block';
-  typeLog('GYRO SENSOR ONLINE','gyro');
-}
-function onOrientation(e){
-  gyroAlpha=e.alpha||0;gyroBeta=e.beta||0;gyroGamma=e.gamma||0;
-  document.getElementById('gyroStat').textContent=`${Math.round(gyroAlpha)}°`;
-  drawGyroHorizon();updateCoordsBar();
-}
-function drawGyroHorizon(){
-  const W=gyroCanv.width,H=gyroCanv.height;gyroCtx.clearRect(0,0,W,H);
-  const roll=gyroGamma*(Math.PI/180),pitch=gyroBeta/90;
-  gyroCtx.save();gyroCtx.translate(W/2,H/2);gyroCtx.rotate(roll);
-  const grad=gyroCtx.createLinearGradient(0,-H,0,H);
-  grad.addColorStop(0,'rgba(0,80,160,0.35)');grad.addColorStop(0.5-pitch*0.3,'rgba(0,80,160,0.25)');
-  grad.addColorStop(0.5-pitch*0.3,'rgba(80,50,0,0.25)');grad.addColorStop(1,'rgba(80,50,0,0.35)');
-  gyroCtx.fillStyle=grad;gyroCtx.fillRect(-W,-H,W*2,H*2);
-  gyroCtx.strokeStyle='rgba(255,255,255,0.7)';gyroCtx.lineWidth=1;gyroCtx.setLineDash([8,4]);
-  gyroCtx.beginPath();gyroCtx.moveTo(-W/2,pitch*30);gyroCtx.lineTo(W/2,pitch*30);gyroCtx.stroke();gyroCtx.setLineDash([]);
-  gyroCtx.strokeStyle='rgba(255,32,32,0.9)';gyroCtx.lineWidth=1.5;
-  gyroCtx.beginPath();gyroCtx.moveTo(-10,0);gyroCtx.lineTo(-4,0);gyroCtx.moveTo(4,0);gyroCtx.lineTo(10,0);gyroCtx.moveTo(0,-6);gyroCtx.lineTo(0,-2);gyroCtx.stroke();
-  gyroCtx.restore();
-  gyroCtx.fillStyle='rgba(255,255,255,0.45)';gyroCtx.font='8px Share Tech Mono';gyroCtx.textAlign='center';
-  gyroCtx.fillText(`HDG ${Math.round(gyroAlpha)}°  PITCH ${Math.round(gyroBeta)}°  ROLL ${Math.round(gyroGamma)}°`,W/2,H-4);
-}
+});
 
-/* ════════════════════════════════════════════
-   MICROPHONE + SPEECH  (auto-start, always on)
-════════════════════════════════════════════ */
-function initMic(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){pillMic.textContent='MIC N/A';pillMic.className='sens-pill err';typeLog('SPEECH API N/A','threat');return;}
-  recognition=new SR();
-  recognition.continuous=true;recognition.interimResults=true;recognition.lang='ru-RU';
-  recognition.onstart=()=>{
-    micActive=true;
-    pillMic.innerHTML='<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(80,255,120,0.9);margin-right:4px;animation:blink 0.6s steps(1) infinite"></span>MIC ON';
-    pillMic.className='sens-pill ok';
-    typeLog('MIC ONLINE — LISTENING','voice');
-  };
-  recognition.onend=()=>{if(micActive)try{recognition.start();}catch{}};
-  recognition.onerror=e=>{
-    if(e.error==='not-allowed'){pillMic.textContent='MIC DENY';pillMic.className='sens-pill err';micActive=false;}
-  };
-  recognition.onresult=e=>{
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t=e.results[i][0].transcript.toUpperCase().trim();
-      if(e.results[i].isFinal)final+=t;else interim+=t;
-    }
-    if(final){logInstant(`"${final}"','voice`);}
-    else if(interim){
-      const last=terminal.querySelector('.log-entry.voice[data-interim="1"]');
-      if(last)last.querySelector('span:last-child').textContent=`"${interim}..."`;
-      else{
-        const e2=document.createElement('div');e2.className='log-entry voice';e2.dataset.interim='1';
-        const t2=document.createElement('span');t2.className='log-ts';t2.textContent=ts();
-        const p2=document.createElement('span');p2.className='log-prefix';p2.textContent='›';
-        const x2=document.createElement('span');x2.textContent=`"${interim}..."`;
-        e2.append(t2,p2,x2);terminal.insertBefore(e2,cursorEl);
-        while(terminal.querySelectorAll('.log-entry').length>14)terminal.removeChild(terminal.querySelector('.log-entry'));
-      }
-    }
-  };
-  try{recognition.start();}catch{}
-}
-
-/* ════════════════════════════════════════════
-   PORTRAIT CAPTURE
-════════════════════════════════════════════ */
+/* Capture */
 function buildCaptureRecord(pred,imgDataURL){
   const uid='0x'+Math.random().toString(16).slice(2,8).toUpperCase();
   const tier=getThreat(pred.class.toLowerCase());
   const sec=String.fromCharCode(65+Math.floor(Math.random()*6))+(Math.floor(Math.random()*9)+1);
-  const alt=gpsAlt?Math.round(gpsAlt):180+Math.round(Math.sin(Date.now()/7000)*5);
   return{id:undefined,ts:new Date().toISOString(),tsDisplay:ts(),uid,
     cls:pred.class,threat:tier,conf:Math.round(pred.score*100),sector:sec,
-    lat:getLat().toFixed(5),lon:getLon().toFixed(5),alt,spd:Math.round(12+Math.random()*3),
-    heading:Math.round(gyroAlpha),pitch:Math.round(gyroBeta),img:imgDataURL};
+    img:imgDataURL};
 }
 function extractPortraitDataURL(pred){
   if(!video.videoWidth||!video.videoHeight)return null;
@@ -890,10 +518,12 @@ function renderCardFromRecord(rec){
   document.getElementById('pStampTime').textContent=rec.tsDisplay;
   document.getElementById('pStampId').textContent='ID:'+rec.uid;
   const rows=[
-    {k:'CLASS',v:rec.cls.toUpperCase(),red:false},{k:'THREAT',v:rec.threat,red:rec.threat==='HIGH'},
-    {k:'CONF',v:rec.conf+'%',red:false},{k:'SECTOR',v:rec.sector,red:false},
-    {k:'UID',v:rec.uid,red:false},{k:'LAT',v:rec.lat+'°',red:false},{k:'LON',v:rec.lon+'°',red:false},
-    {k:'ALT',v:rec.alt+'m',red:false},{k:'HDG',v:rec.heading+'°',red:false},{k:'STATUS',v:'LOCKED',red:true},
+    {k:'CLASS',v:rec.cls.toUpperCase(),red:false},
+    {k:'THREAT',v:rec.threat,red:rec.threat==='HIGH'},
+    {k:'CONF',v:rec.conf+'%',red:false},
+    {k:'SECTOR',v:rec.sector,red:false},
+    {k:'UID',v:rec.uid,red:false},
+    {k:'STATUS',v:'LOCKED',red:true},
   ];
   const cmRows=document.getElementById('cmRows');cmRows.innerHTML='';
   rows.forEach(r=>{const d=document.createElement('div');d.className='cm-row';d.innerHTML=`<span class="cm-key">${r.k}</span><span class="cm-val${r.red?' red':''}">${r.v}</span>`;cmRows.appendChild(d);});
@@ -915,83 +545,36 @@ function flashEffects(){
 function showCard(){captureCard.classList.add('show');cardVisible=true;tapHint.classList.remove('show');}
 function hideCard(){captureCard.classList.remove('show');cardVisible=false;}
 
-/* ════════════════════════════════════════════
-   SERIES MODE
-════════════════════════════════════════════ */
-function startSeries(){
-  seriesActive=true;seriesCaptures=[];seriesThrottle=0;
-  seriesBtn.classList.add('armed');seriesBtn.textContent='■ STOP SERIES';
-  seriesBadge.style.display='block';seriesBadge.textContent='SER: 0';
-  typeLog('SERIES MODE ARMED','threat');
-}
-async function stopSeries(){
-  seriesActive=false;
-  seriesBtn.classList.remove('armed');seriesBtn.textContent='◉ SERIES';
-  seriesBadge.style.display='none';
-  typeLog(`SERIES COMPLETE — ${seriesCaptures.length} CAPTURES`,'info');
-  if(seriesCaptures.length>0)await generatePDF(seriesCaptures);
-}
-seriesBtn.addEventListener('click',e=>{e.stopPropagation();if(seriesActive)stopSeries();else startSeries();});
-
-async function seriesTick(){
-  if(!seriesActive||!allPredictions.length)return;
-  seriesThrottle++;if(seriesThrottle<SERIES_INTERVAL_FRAMES)return;seriesThrottle=0;
-  for(const pred of allPredictions){
-    const rec=await doCapture(pred);if(!rec)continue;
-    seriesCaptures.push(rec);seriesBadge.textContent=`SER: ${seriesCaptures.length}`;
-    typeLog(`[SER] ${pred.class.toUpperCase()} — ${getThreat(pred.class.toLowerCase())}`,'threat');
-    renderCardFromRecord(rec);showCard();flashEffects();
-    await new Promise(r=>setTimeout(r,IS_MOBILE?80:40));
-  }
-}
-
-/* ════════════════════════════════════════════
-   PDF GENERATION  — new popup UI
-════════════════════════════════════════════ */
+/* PDF */
 let _pdfBlobUrl=null;
-
 function pdfProgress(val,total,sub){
   pdfBarFill.style.width=Math.round(val/total*100)+'%';
-  pdfSub.textContent=sub;
-  pdfCount.textContent=`${val} / ${total}`;
+  pdfSub.textContent=sub;pdfCount.textContent=`${val} / ${total}`;
 }
-
 async function generatePDF(captures){
-  const{jsPDF}=window.jspdf;
-  if(!jsPDF){typeLog('PDF LIB NOT LOADED','threat');return;}
-
-  /* Show popup */
-  pdfActions.style.display='none';
-  pdfBarFill.style.width='0%';
-  pdfSub.textContent='COMPILING DATA...';
-  pdfCount.textContent='';
-  pdfOverlay.classList.add('show');
-  await new Promise(r=>setTimeout(r,50));
-
-  const W=210,H=297;
-  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const{jsPDF}=window.jspdf;if(!jsPDF){typeLog('PDF LIB NOT LOADED','threat');return;}
+  pdfActions.style.display='none';pdfBarFill.style.width='0%';
+  pdfSub.textContent='COMPILING DATA...';pdfCount.textContent='';
+  pdfOverlay.classList.add('show');await new Promise(r=>setTimeout(r,50));
+  const W=210,H=297,doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const sf=(sz,col=[255,255,255],sty='normal')=>{doc.setFont('courier',sty);doc.setFontSize(sz);doc.setTextColor(...col);};
   const total=captures.length;
-
   for(let i=0;i<total;i++){
-    const rec=captures[i];
-    pdfProgress(i+1,total,`OBJECT ${i+1} / ${total}`);
-    await new Promise(r=>setTimeout(r,30));
+    const rec=captures[i];pdfProgress(i+1,total,`OBJECT ${i+1} / ${total}`);await new Promise(r=>setTimeout(r,30));
     if(i>0)doc.addPage();
     doc.setFillColor(0,0,0);doc.rect(0,0,W,H,'F');
     doc.setFillColor(255,32,32);doc.rect(0,0,W,8,'F');
     doc.setFont('courier','bold');doc.setFontSize(10);doc.setTextColor(0,0,0);
     doc.text('myFIX // TACTICAL INTELLIGENCE REPORT',W/2,5.5,{align:'center'});
     doc.setDrawColor(255,32,32);doc.setLineWidth(0.3);doc.rect(3,10,W-6,H-14,'S');
-    sf(7,[255,32,32],'bold');doc.text(`SERIES CAPTURE — OBJECT ${i+1} OF ${total}`,8,16);
+    sf(7,[255,32,32],'bold');doc.text(`CAPTURE — OBJECT ${i+1} OF ${total}`,8,16);
     doc.text(`SESSION: ${new Date().toISOString()}`,W-8,16,{align:'right'});
     doc.setDrawColor(255,32,32,0.4);doc.setLineWidth(0.15);doc.line(8,18,W-8,18);
     if(rec.img){try{
       doc.setFillColor(10,10,10);doc.rect(8,21,60,60,'F');
       doc.setDrawColor(255,32,32);doc.setLineWidth(0.3);doc.rect(8,21,60,60,'S');
       doc.addImage(rec.img,'JPEG',8,21,60,60);
-      const[bx,by,bl]=[8,21,6];
-      doc.setDrawColor(255,32,32);doc.setLineWidth(0.5);
+      const[bx,by,bl]=[8,21,6];doc.setDrawColor(255,32,32);doc.setLineWidth(0.5);
       doc.line(bx,by+bl,bx,by);doc.line(bx,by,bx+bl,by);doc.line(bx+60-bl,by,bx+60,by);doc.line(bx+60,by,bx+60,by+bl);
       doc.line(bx,by+60-bl,bx,by+60);doc.line(bx,by+60,bx+bl,by+60);doc.line(bx+60-bl,by+60,bx+60,by+60);doc.line(bx+60,by+60-bl,bx+60,by+60);
       doc.setFillColor(0,0,0);doc.rect(8,75,60,5,'F');
@@ -999,9 +582,7 @@ async function generatePDF(captures){
     }catch{}}
     const fields=[
       ['CLASS',rec.cls.toUpperCase()],['THREAT',rec.threat],['CONF',rec.conf+'%'],
-      ['SECTOR',rec.sector],['UID',rec.uid],['LAT',rec.lat+'°'],['LON',rec.lon+'°'],
-      ['ALT',rec.alt+'m'],['HEADING',rec.heading+'°'],['PITCH',rec.pitch+'°'],
-      ['TIMESTAMP',rec.tsDisplay],['STATUS','LOCKED'],
+      ['SECTOR',rec.sector],['UID',rec.uid],['TIMESTAMP',rec.tsDisplay],['STATUS','LOCKED'],
     ];
     fields.forEach(([k,v],idx)=>{
       const y=22+idx*6.2;
@@ -1009,70 +590,39 @@ async function generatePDF(captures){
       sf(7,(k==='THREAT'&&v==='HIGH')||(k==='STATUS')?[255,32,32]:[220,220,220]);doc.text(v,104,y);
       doc.setDrawColor(255,255,255,25);doc.setLineWidth(0.1);doc.line(76,y+1.5,W-8,y+1.5);
     });
-    const tc={HIGH:[255,32,32],MED:[255,140,0],LOW:[255,220,50]}[rec.threat]||[200,200,200];
+    const tc={HIGH:[255,32,32],MED:[255,200,50]}[rec.threat]||[200,200,200];
     doc.setFillColor(...tc);doc.rect(W-11,21,3,60,'F');
     sf(6,tc,'bold');doc.text(rec.threat,W-10,55,{angle:90});
     doc.setDrawColor(255,32,32,0.3);doc.setLineWidth(0.15);doc.line(8,88,W-8,88);
-    sf(7,[255,32,32],'bold');doc.text('// INTELLIGENCE ASSESSMENT',8,93);
-    sf(7,[180,180,180]);
+    sf(7,[255,32,32],'bold');doc.text('// INTELLIGENCE ASSESSMENT',8,93);sf(7,[180,180,180]);
     [`Object "${rec.cls}" detected with ${rec.conf}% confidence. Threat: ${rec.threat}.`,
-     `Position: ${rec.lat}°N ${rec.lon}°E. Alt: ${rec.alt}m. Heading: ${rec.heading}°.`,
      `UID: ${rec.uid}. Sector: ${rec.sector}. Archived in session cache.`
     ].forEach((n,j)=>doc.text(n,8,99+j*5,{maxWidth:W-16}));
     doc.setDrawColor(255,32,32,0.2);doc.line(3,H-10,W-3,H-10);
     sf(6,[80,80,80]);doc.text(`myFIX // PAGE ${i+1}/${total} // ${new Date().toUTCString()}`,W/2,H-6,{align:'center'});
     sf(6,[255,32,32]);doc.text(`THREAT: ${rec.threat}`,8,H-6);
   }
-
-  pdfBarFill.style.width='100%';
-  pdfSub.textContent='REPORT READY';
-  pdfCount.textContent=`${total} OBJECTS`;
-
-  /* Create blob & wire download button */
+  pdfBarFill.style.width='100%';pdfSub.textContent='REPORT READY';pdfCount.textContent=`${total} OBJECTS`;
   const blob=doc.output('blob');
   if(_pdfBlobUrl)URL.revokeObjectURL(_pdfBlobUrl);
   _pdfBlobUrl=URL.createObjectURL(blob);
-
-  pdfDownBtn.onclick=()=>{
-    if(IS_IOS){window.open(_pdfBlobUrl,'_blank');}
-    else{const a=document.createElement('a');a.href=_pdfBlobUrl;a.download=`myFIX_${Date.now()}.pdf`;a.click();}
-  };
-  pdfCloseBtn.onclick=()=>{pdfOverlay.classList.remove('show');};
+  pdfDownBtn.onclick=()=>{if(IS_IOS)window.open(_pdfBlobUrl,'_blank');else{const a=document.createElement('a');a.href=_pdfBlobUrl;a.download=`myFIX_${Date.now()}.pdf`;a.click();}};
+  pdfCloseBtn.onclick=()=>pdfOverlay.classList.remove('show');
   pdfActions.style.display='flex';
-
   typeLog(`PDF READY — ${total} OBJECTS`,'info');
 }
+pdfOverlay.addEventListener('pointerdown',e=>{if(e.target===pdfOverlay)pdfOverlay.classList.remove('show');});
 
-/* Close popup on overlay click (outside box) */
-pdfOverlay.addEventListener('pointerdown',e=>{if(e.target===pdfOverlay){pdfOverlay.classList.remove('show');}});
-
-/* Public API */
-window.myfix={typeLog,logInstant,
-  loadModel:async url=>{
-    try{
-      typeLog(`LOADING NN: ${url.split('/').slice(-2).join('/')}...`,'info');
-      const m=await tf.loadGraphModel(url);
-      const name=url.split('/').filter(Boolean).pop().replace('.json','');
-      extraModels.push({name,model:m,url});
-      pillNN.textContent=`NN:${extraModels.length+1}`;pillNN.className='sens-pill ok';
-      typeLog(`NN LOADED: ${name}`,'voice');return m;
-    }catch(e){typeLog(`NN FAIL: ${e.message.slice(0,40)}`,'threat');return null;}
-  },
-  getModels:()=>extraModels,
-};
-
-/* ════════════════════════════════════════════
-   TAP HANDLER
-════════════════════════════════════════════ */
+/* Tap handler */
 document.getElementById('container').addEventListener('pointerdown',e=>{
   if(startBtn.style.display!=='none')return;
-  if(pdfOverlay.classList.contains('show')){return;}/* handled by overlay listener */
+  if(pdfOverlay.classList.contains('show'))return;
   if(cardVisible){
     const r=captureCard.getBoundingClientRect();
     if(!(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom))hideCard();
     return;
   }
-  if(!seriesActive&&isLocked&&primaryTarget){
+  if(isLocked&&primaryTarget){
     (async()=>{
       const rec=await doCapture(primaryTarget);if(!rec)return;
       renderCardFromRecord(rec);showCard();flashEffects();
@@ -1081,57 +631,35 @@ document.getElementById('container').addEventListener('pointerdown',e=>{
   }
 });
 
-/* ════════════════════════════════════════════
-   START — requests all sensors immediately
-════════════════════════════════════════════ */
+/* START */
 startBtn.onclick=async()=>{
   startBtn.style.opacity='0';startBtn.style.transition='opacity 0.5s';
   setTimeout(()=>startBtn.style.display='none',500);
-
   document.getElementById('statusPanel').style.display='flex';
   document.getElementById('botbar').style.display='flex';
   document.getElementById('sensorStrip').style.display='flex';
   document.getElementById('toolbar').style.display='flex';
 
-  /* Cache */
   try{await openDB();const cnt=await dbCount();document.getElementById('cacheStat').textContent=cnt;cacheInd.style.display='block';cacheInd.classList.add('loaded');cacheInd.textContent=`◈ CACHE: ${cnt}`;typeLog(`CACHE OK — ${cnt} RECORDS`,'info');}
   catch{typeLog('CACHE UNAVAILABLE','threat');}
 
   await typeLog('BOOT SEQUENCE INITIATED','info');
 
-  /* ── Camera ── */
+  /* Camera only */
   await typeLog('REQUESTING CAMERA...','info');
   try{
     const s=await navigator.mediaDevices.getUserMedia({
       video:{facingMode:'environment',width:{ideal:IS_MOBILE?1280:1920},height:{ideal:IS_MOBILE?720:1080},frameRate:{ideal:IS_MOBILE?30:60}},
-      audio:true   /* request audio here so mic permission fires in one gesture */
+      audio:false
     });
-    /* Split tracks — video to video element, suppress audio from camera */
-    const vStream=new MediaStream(s.getVideoTracks());
-    video.srcObject=vStream;
+    video.srcObject=new MediaStream(s.getVideoTracks());
+    pillCam.textContent='CAM OK';pillCam.className='sens-pill ok';
     await typeLog('OPTICAL SENSOR OK','info');
   }catch(err){
-    /* fallback: try video only if audio denied */
-    try{
-      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-      video.srcObject=s;
-      await typeLog('OPTICAL SENSOR OK (no audio)','info');
-    }catch{await typeLog('CAMERA FAILED','threat');return;}
+    pillCam.textContent='CAM ERR';pillCam.className='sens-pill err';
+    await typeLog('CAMERA FAILED','threat');return;
   }
 
-  /* ── GPS (fires async, no await) ── */
-  typeLog('REQUESTING GPS...','geo');
-  initGeo();
-
-  /* ── Gyroscope ── */
-  typeLog('REQUESTING GYRO...','gyro');
-  initGyro();  /* async internally but we don't await to keep boot fast */
-
-  /* ── Microphone / Speech ── */
-  typeLog('REQUESTING MIC...','voice');
-  initMic();
-
-  /* ── TF.js ── */
   await typeLog('LOADING NEURAL NETWORK...','info');
   if(IS_MOBILE){try{await tf.setBackend('webgl');}catch{await tf.setBackend('cpu');}}
   else await tf.setBackend('webgl');
@@ -1140,33 +668,22 @@ startBtn.onclick=async()=>{
   model=await cocoSsd.load({base:IS_MOBILE?'lite_mobilenet_v2':'mobilenet_v2'});
   document.getElementById('modelStat').textContent=IS_MOBILE?'COCO-LITE':'COCO-SSD';
   document.getElementById('modeVal').textContent='ACTIVE';
+  pillNN.textContent='NN: COCO';pillNN.className='sens-pill ok';
   await typeLog('MODEL ONLINE — 80 CLASS DETECTION','info');
   await typeLog('TAP LOCKED TARGET TO CAPTURE','threat');
   await typeLog('SCANNING...','info');
 
-  /* ── WebGL filter ── */
-  initWebGL();
-
-  resize();detectLoop();drawHUD();
+  initWebGL();resize();detectLoop();drawHUD();
 };
 
-/* ════════════════════════════════════════════
-   RESIZE
-════════════════════════════════════════════ */
-function resize(){
-  hudCanvas.width =Math.round(innerWidth *EFF_DPR);
-  hudCanvas.height=Math.round(innerHeight*EFF_DPR);
-}
+function resize(){hudCanvas.width=Math.round(innerWidth*EFF_DPR);hudCanvas.height=Math.round(innerHeight*EFF_DPR);}
 window.addEventListener('resize',resize);
 
-/* ════════════════════════════════════════════
-   DETECT LOOP
-════════════════════════════════════════════ */
+/* Detect loop */
 async function detectLoop(){
   if(model&&video.readyState>=3){
     try{allPredictions=await model.detect(video);primaryTarget=allPredictions[0]||null;}catch{}
   }
-  await seriesTick();
   if(primaryTarget){
     const p=primaryTarget;const[x,y,w,h]=p.bbox;
     const sX=innerWidth/(video.videoWidth||1),sY=innerHeight/(video.videoHeight||1);
@@ -1180,7 +697,7 @@ async function detectLoop(){
       document.getElementById('lockStat').className='sp-val active';
       glitchActive=12;
       typeLog(`LOCK — ${p.class.toUpperCase()} [${getThreat(p.class.toLowerCase())}]`,'threat');
-      if(!cardVisible&&!seriesActive)tapHint.classList.add('show');
+      if(!cardVisible)tapHint.classList.add('show');
     }
     if(!isLocked&&wasLocked){
       document.getElementById('threatBox').classList.remove('show');
@@ -1204,28 +721,25 @@ function buildInfo(p){
   infoLines=[{k:'CLASS',v:p.class.toUpperCase()},{k:'THREAT',v:tier},{k:'CONF',v:Math.round(p.score*100)+'%'},
     {k:'ID',v:'0x'+Math.random().toString(16).slice(2,8).toUpperCase()},
     {k:'SECTOR',v:`${String.fromCharCode(65+Math.floor(Math.random()*6))}${Math.floor(Math.random()*9+1)}`},
-    {k:'HDG',v:Math.round(gyroAlpha)+'°'},{k:'STATUS',v:'LOCKED'}];
+    {k:'STATUS',v:'LOCKED'}];
   const tl=document.getElementById('threatLines');tl.innerHTML='';
   infoLines.forEach(l=>{const r=document.createElement('div');r.className='tbi';r.innerHTML=`<span class="tbi-key">${l.k}</span>  ${l.v}`;tl.appendChild(r);});
 }
 
-/* ════════════════════════════════════════════
-   HUD DRAW LOOP  (Canvas 2D — reticle & boxes)
-════════════════════════════════════════════ */
+/* HUD draw */
 function drawHUD(){
   ctx.clearRect(0,0,hudCanvas.width,hudCanvas.height);
   const dpr=EFF_DPR,W=hudCanvas.width,H=hudCanvas.height;
   const dX=targetPos.active?targetPos.x:innerWidth/2;
   const dY=targetPos.active?targetPos.y:innerHeight/2;
-  currentPos.x+=(dX-currentPos.x)*0.12;
-  currentPos.y+=(dY-currentPos.y)*0.12;
+  currentPos.x+=(dX-currentPos.x)*0.12;currentPos.y+=(dY-currentPos.y)*0.12;
   lockFactor=isLocked?Math.min(1,lockFactor+0.08):Math.max(0,lockFactor-0.04);
   pulseTime+=0.05;scanAngle+=0.02;
 
+  /* Colour by threat — HIGH=red, MED=yellow */
   const tier=primaryTarget?getThreat(primaryTarget.class.toLowerCase()):null;
   let rr=200,rg=220,rb=255;
-  if(isLocked){if(tier==='HIGH'){rr=255;rg=20;rb=20;}else if(tier==='MED'){rr=255;rg=140;rb=0;}else{rr=255;rg=220;rb=50;}}
-  if(seriesActive){rr=Math.min(255,rr+30);rg=Math.max(0,rg-40);}
+  if(isLocked){if(tier==='HIGH'){rr=255;rg=20;rb=20;}else{rr=255;rg=210;rb=30;}}
   const mainColor=`rgba(${rr},${rg},${rb},${0.6+0.4*lockFactor})`;
 
   ewTimer++;if(ewTimer%220===0)ewIntensity=20;
@@ -1247,7 +761,8 @@ function drawHUD(){
       const sX=innerWidth/(video.videoWidth||1),sY=innerHeight/(video.videoHeight||1);
       const rx=bx*sX*dpr,ry=by*sY*dpr,rw=bw*sX*dpr,rh=bh*sY*dpr;
       const t=getThreat(p.class.toLowerCase());
-      ctx.strokeStyle=t==='HIGH'?'rgba(255,80,80,0.4)':t==='MED'?'rgba(255,160,0,0.35)':'rgba(200,200,255,0.25)';
+      /* HIGH = red, MED = yellow */
+      ctx.strokeStyle=t==='HIGH'?'rgba(255,40,40,0.5)':'rgba(255,210,30,0.4)';
       if(USE_SHADOW)ctx.shadowColor=ctx.strokeStyle;
       ctx.lineWidth=1*dpr;ctx.setLineDash([4*dpr,4*dpr]);ctx.strokeRect(rx,ry,rw,rh);ctx.setLineDash([]);
       ctx.fillStyle=ctx.strokeStyle;ctx.font=`${9*dpr}px 'Share Tech Mono'`;ctx.fillText(p.class.toUpperCase(),rx+4*dpr,ry-4*dpr);
@@ -1268,21 +783,14 @@ function drawHUD(){
     ctx.restore();
   }
 
-  /* Series scan line */
-  if(seriesActive){const sY2=(Date.now()%2000/2000)*H;ctx.save();ctx.strokeStyle='rgba(255,32,32,0.13)';ctx.lineWidth=2*dpr;ctx.beginPath();ctx.moveTo(0,sY2);ctx.lineTo(W,sY2);ctx.stroke();ctx.restore();}
-
   drawReticle(cx,cy,dpr,lockFactor,mainColor,rr,rg,rb);
   if(lockFactor>0.05){ctx.globalAlpha=lockFactor;drawDataBlock(cx,cy,dpr,mainColor);ctx.globalAlpha=1;}
 
-  /* EW HUD noise */
   if(ewIntensity>3){const n=Math.min(EW_PARTICLES,Math.round(ewIntensity*0.5));for(let i=0;i<n;i++){ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.1})`;ctx.fillRect(Math.random()*W,Math.random()*H,(1+Math.random()*2)*dpr,dpr);}}
 
-  drawCornerDeco(W,H,dpr);
-  ctx.restore();
+  drawCornerDeco(W,H,dpr);ctx.restore();
   requestAnimationFrame(drawHUD);
 }
-
-/* ── Reticle ── */
 function drawReticle(cx,cy,dpr,lf,mainColor,rr,rg,rb){
   ctx.save();ctx.translate(cx,cy);
   ctx.strokeStyle=`rgba(${rr},${rg},${rb},0.2)`;ctx.lineWidth=0.5*dpr;ctx.shadowBlur=0;
