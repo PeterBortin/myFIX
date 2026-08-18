@@ -14,12 +14,12 @@
     --mono: 'Share Tech Mono', monospace;
     --sans: 'Rajdhani', sans-serif;
 }
-html, body { overscroll-behavior: none; }
+html, body { overscroll-behavior: none; height: 100%; }
 body {
     margin: 0; background: #000; overflow: hidden;
     font-family: var(--mono); user-select: none; -webkit-user-select: none; cursor: crosshair;
 }
-#container { position: relative; width: 100vw; height: 100vh; touch-action: manipulation; }
+#container { position: relative; width: 100vw; height: 100vh; height: 100dvh; touch-action: manipulation; }
 
 /* Відео — fallback-шар, коли WebGL живий, ховається (opacity 0), але грає як texture source */
 video {
@@ -51,15 +51,15 @@ video {
     padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
     z-index: 16; border-top: 1px solid rgba(255,255,255,0.07);
 }
-#botLeft  { display: flex; flex-direction: column; gap: 2px; }
-#botRight { display: flex; gap: 8px; }
-.coords { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; }
+#botLeft  { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
+#botRight { display: flex; gap: 8px; flex-shrink: 0; }
+.coords { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .hudBtn {
     background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
     color: rgba(255,255,255,0.7); font-family: var(--sans);
     font-size: 10px; font-weight: 700; letter-spacing: 2px;
-    padding: 9px 14px; cursor: pointer; text-transform: uppercase; touch-action: manipulation;
+    padding: 8px 12px; cursor: pointer; text-transform: uppercase; touch-action: manipulation;
 }
 .hudBtn.on { border-color: var(--red); color: var(--red); text-shadow: 0 0 8px var(--red); box-shadow: inset 0 0 10px rgba(255,32,32,0.2); }
 .hudBtn.off { opacity: 0.35; text-decoration: line-through; }
@@ -474,6 +474,54 @@ function easeWipe(t){
     t = Math.min(1, Math.max(0, t));
     return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
+/* Гліфи мови Яутжа: кожен символ = 2-4 «кігтьові» штрихи в юніт-клітинці [x1,y1,x2,y2].
+   Це ручне наближення стилю розкладки; для піксельної точності заміни вектори тут. */
+const YAUTJA = {
+    'A':[[0.2,0.65,0.35,0.25],[0.5,0.25,0.62,0.6],[0.72,0.3,0.85,0.6]],
+    'B':[[0.2,0.25,0.2,0.65],[0.4,0.2,0.6,0.35],[0.4,0.55,0.6,0.7]],
+    'C':[[0.6,0.2,0.3,0.35],[0.25,0.45,0.35,0.7],[0.45,0.75,0.7,0.7]],
+    'D':[[0.3,0.2,0.55,0.2],[0.65,0.3,0.65,0.6],[0.35,0.75,0.6,0.75]],
+    'E':[[0.25,0.25,0.6,0.2],[0.25,0.45,0.5,0.45],[0.25,0.7,0.6,0.72]],
+    'F':[[0.3,0.2,0.3,0.75],[0.45,0.25,0.75,0.3],[0.45,0.5,0.65,0.5]],
+    'G':[[0.65,0.25,0.35,0.3],[0.3,0.5,0.4,0.7],[0.55,0.68,0.68,0.5]],
+    'H':[[0.25,0.25,0.28,0.7],[0.7,0.22,0.72,0.68],[0.35,0.48,0.62,0.5]],
+    'I':[[0.5,0.2,0.5,0.4],[0.5,0.55,0.5,0.75]],
+    'J':[[0.6,0.2,0.6,0.55],[0.5,0.7,0.35,0.65]],
+    'K':[[0.3,0.2,0.3,0.7],[0.65,0.25,0.42,0.48],[0.45,0.55,0.7,0.75]],
+    'L':[[0.3,0.2,0.32,0.65],[0.4,0.72,0.7,0.72]],
+    'M':[[0.2,0.7,0.28,0.25],[0.42,0.5,0.5,0.25],[0.62,0.5,0.7,0.25],[0.78,0.7,0.72,0.3]],
+    'N':[[0.25,0.7,0.3,0.22],[0.4,0.35,0.62,0.6],[0.72,0.68,0.75,0.22]],
+    'O':[[0.35,0.25,0.6,0.22],[0.7,0.4,0.65,0.62],[0.3,0.6,0.42,0.72]],
+    'P':[[0.3,0.75,0.3,0.2],[0.45,0.25,0.68,0.35],[0.45,0.5,0.6,0.45]],
+    'Q':[[0.35,0.25,0.62,0.25],[0.68,0.4,0.6,0.62],[0.35,0.6,0.42,0.72],[0.6,0.65,0.75,0.78]],
+    'R':[[0.28,0.2,0.28,0.72],[0.45,0.28,0.65,0.4],[0.5,0.55,0.7,0.75]],
+    'S':[[0.65,0.22,0.4,0.3],[0.4,0.45,0.6,0.55],[0.6,0.68,0.35,0.75]],
+    'T':[[0.25,0.22,0.75,0.25],[0.5,0.35,0.5,0.75]],
+    'U':[[0.3,0.2,0.32,0.6],[0.45,0.72,0.6,0.7],[0.7,0.6,0.68,0.2]],
+    'V':[[0.28,0.2,0.45,0.68],[0.55,0.68,0.72,0.2]],
+    'W':[[0.2,0.2,0.3,0.7],[0.42,0.45,0.5,0.72],[0.58,0.72,0.66,0.45],[0.78,0.7,0.8,0.2]],
+    'X':[[0.3,0.25,0.45,0.42],[0.55,0.55,0.7,0.72],[0.7,0.25,0.55,0.42],[0.45,0.55,0.3,0.72]],
+    'Y':[[0.3,0.22,0.48,0.45],[0.7,0.22,0.52,0.45],[0.5,0.55,0.5,0.78]],
+    'Z':[[0.3,0.25,0.7,0.22],[0.65,0.35,0.35,0.62],[0.3,0.75,0.7,0.72]],
+    '0':[[0.4,0.22,0.62,0.25],[0.68,0.42,0.62,0.65],[0.38,0.7,0.32,0.45]],
+    '1':[[0.45,0.3,0.55,0.2],[0.55,0.25,0.55,0.75]],
+    '2':[[0.35,0.3,0.6,0.25],[0.65,0.4,0.45,0.55],[0.35,0.7,0.68,0.72]],
+    '3':[[0.35,0.25,0.6,0.3],[0.5,0.45,0.65,0.5],[0.35,0.7,0.62,0.68]],
+    '4':[[0.6,0.2,0.35,0.5],[0.35,0.55,0.7,0.55],[0.6,0.4,0.62,0.75]],
+    '5':[[0.65,0.22,0.35,0.25],[0.35,0.4,0.6,0.48],[0.6,0.6,0.35,0.7]],
+    '6':[[0.6,0.2,0.4,0.35],[0.35,0.5,0.4,0.7],[0.55,0.72,0.62,0.5]],
+    '7':[[0.3,0.22,0.7,0.25],[0.62,0.38,0.45,0.72]],
+    '8':[[0.45,0.22,0.6,0.35],[0.6,0.35,0.42,0.5],[0.42,0.5,0.6,0.65],[0.6,0.65,0.45,0.78]],
+    '9':[[0.42,0.2,0.6,0.28],[0.6,0.3,0.45,0.45],[0.6,0.28,0.58,0.75]],
+    ':':[[0.5,0.28,0.5,0.36],[0.5,0.6,0.5,0.68]],
+    '%':[[0.3,0.3,0.36,0.36],[0.64,0.62,0.7,0.68],[0.66,0.26,0.34,0.72]],
+    '-':[[0.35,0.5,0.65,0.5]],
+    '.':[[0.48,0.66,0.52,0.72]],
+    '/':[[0.62,0.24,0.38,0.74]],
+    '?':[[0.45,0.45,0.55,0.55]],
+    ' ':[]
+};
+function yGlyph(ch){ return YAUTJA[ch] !== undefined ? YAUTJA[ch] : YAUTJA['?']; }
 /*__PURE_END__*/
 
 /* ── Конфіг ── */
@@ -593,10 +641,26 @@ const AU = {
             t += 0.05 + Math.random()*0.08;
         }
     },
-    thermal(on){
+    visionSwap(on){
+        /* біо-маска: серво-віск + варбл через LFO + шум-шлейф + низький удар */
+        if (!this.ctx) return; const c = this.ctx, t = this.now();
+        this.osc('sine', on ? 1400 : 520, on ? 480 : 1500, t, 0.16, 0.05);
+        const o = c.createOscillator(); o.type = 'triangle';
+        o.frequency.setValueAtTime(on ? 520 : 390, t);
+        const lfo = c.createOscillator(); lfo.frequency.value = on ? 16 : 11;
+        const lg = c.createGain(); lg.gain.value = on ? 150 : 90;
+        lfo.connect(lg); lg.connect(o.frequency);
+        const g = c.createGain();
+        this.env(g, t + 0.08, 0.06, 0.05, 0.85);
+        o.connect(g); g.connect(this.master);
+        o.start(t + 0.08); o.stop(t + 1.15);
+        lfo.start(t + 0.08); lfo.stop(t + 1.15);
+        this.nz(t + 0.05, 0.85, 0.06, 'bandpass', on ? 4200 : 900, on ? 900 : 4200, 3);
+        this.osc('sine', 95, 42, t + 0.8, 0.3, 0.09);
+    },
+    triPing(){
         if (!this.ctx) return; const t = this.now();
-        if (on){ this.osc('sawtooth',150,950,t,1.1,0.045); this.nz(t,1.15,0.09,'bandpass',350,2800,2); this.osc('sine',55,55,t,1.3,0.04); }
-        else   { this.osc('sawtooth',900,140,t,0.9,0.04);  this.nz(t,0.95,0.08,'bandpass',2600,320,2); }
+        [620, 830, 1080].forEach((f, i) => this.osc('square', f, f, t + i * 0.09, 0.055, 0.05));
     },
     humStart(){
         if (!this.ctx || this.hum) return;
@@ -700,14 +764,14 @@ void main(){
     lt += (hash(vUV * vec2(431.0, 917.0) + uTime * 3.0) - 0.5) * 0.05;
     vec3 thr = palette(clamp(lt, 0.0, 1.0));
 
-    float edgeN = (hash(vec2(vUV.x * 23.0, floor(uTime * 20.0))) - 0.5) * 0.05;
-    float yb = 1.08 - 1.16 * uWipe;
-    float k = smoothstep(yb - 0.05, yb + 0.05, vUV.y + edgeN);
+    float edgeN = (hash(vec2(vUV.y * 23.0, floor(uTime * 20.0))) - 0.5) * 0.05;
+    float xb = 1.16 * uWipe - 0.08;
+    float k = 1.0 - smoothstep(xb - 0.05, xb + 0.05, vUV.x + edgeN);
     float m = mix(uA, uB, k);
     vec3 col = mix(opt, thr, m);
 
     float tr = step(0.001, uWipe) * (1.0 - step(0.999, uWipe));
-    float band2 = exp(-pow((vUV.y - yb) * 26.0, 2.0)) * tr;
+    float band2 = exp(-pow((vUV.x - xb) * 26.0, 2.0)) * tr;
     col += vec3(1.0, 0.85, 0.5) * band2 * 0.55;
 
     float d = length(vUV - vec2(0.5, 0.5));
@@ -785,7 +849,7 @@ function setVision(v){
     if (v === ST.vis) return;
     ST.wipeFrom = ST.vis; ST.wipeTo = v; ST.vis = v;
     ST.wipeStart = performance.now();
-    AU.thermal(v === 1);
+    AU.visionSwap(v === 1);
     AU.droneSet(v === 1);
     thermalBtn.classList.toggle('on', v === 1);
     visVal.textContent = v ? 'THERMAL' : 'OPTICAL';
@@ -962,6 +1026,7 @@ function onLock(p){
     lockStat.textContent = p.cls.toUpperCase();
     lockStat.className = 'sp-val active';
     AU.lockOn();
+    if (ST.vis === 1) AU.clicks();
     ST.nextPing = performance.now() + 1200;
     typeLog('ЗАЛОЧИВ — ' + p.cls.toUpperCase() + ' [' + getThreat(p.cls) + ']', 'threat');
     if (!ST.cardVisible) tapHint.classList.add('show');
@@ -1091,22 +1156,35 @@ function currentInfo(){
 
 /* ── T-800 колонка асемблера ── */
 const ASM_OPS = ['LDA','STA','JMP','BNE','CMP','LDX','LDY','STX','INX','DEX','BEQ','JSR','RTS','ADC','SBC','AND','ORA','EOR','ASL','LSR','BRK','NOP'];
-let asmLines = [], lastAsm = 0;
+let asmLines = [], yLines = [], lastAsm = 0;
+const YCH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+function yLine(){ let s = ''; for (let i = 0; i < 7; i++) s += Math.random() < 0.12 ? ' ' : YCH[(Math.random() * YCH.length) | 0]; return s; }
 function hx(){ return Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase(); }
 function asmLine(){ return hx() + hx() + ' ' + hx() + ' ' + hx() + '  ' + ASM_OPS[(Math.random() * ASM_OPS.length) | 0] + ' $' + hx() + hx(); }
 function drawAsm(now, dpr){
     if (innerWidth < 380) return;
-    if (now - lastAsm > 110){ lastAsm = now; asmLines.push(asmLine()); if (asmLines.length > 40) asmLines.shift(); }
+    if (now - lastAsm > 110){
+        lastAsm = now;
+        asmLines.push(asmLine()); if (asmLines.length > 40) asmLines.shift();
+        yLines.push(yLine());     if (yLines.length > 40) yLines.shift();
+    }
     const yStart = 210, yEnd = innerHeight - 250;
-    const maxN = Math.floor((yEnd - yStart) / 11);
+    const step = ST.vis === 1 ? 14 : 11;
+    const maxN = Math.floor((yEnd - yStart) / step);
     if (maxN < 4) return;
-    const n = Math.min(maxN, asmLines.length);
     ctx.save();
-    ctx.font = (7.5 * dpr) + "px 'Share Tech Mono'";
-    ctx.fillStyle = ST.vis === 1 ? 'rgba(255,220,150,0.16)' : 'rgba(255,255,255,0.12)';
     ctx.shadowBlur = 0;
-    for (let i = 0; i < n; i++)
-        ctx.fillText(asmLines[asmLines.length - n + i], 10 * dpr, (yStart + i * 11) * dpr);
+    if (ST.vis === 1){
+        const n = Math.min(maxN, yLines.length);
+        for (let i = 0; i < n; i++)
+            drawYautja(yLines[yLines.length - n + i], 10 * dpr, (yStart + i * step) * dpr, 8 * dpr, 'rgba(255,220,150,0.2)');
+    } else {
+        const n = Math.min(maxN, asmLines.length);
+        ctx.font = (7.5 * dpr) + "px 'Share Tech Mono'";
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        for (let i = 0; i < n; i++)
+            ctx.fillText(asmLines[asmLines.length - n + i], 10 * dpr, (yStart + i * step) * dpr);
+    }
     ctx.restore();
 }
 
@@ -1304,13 +1382,118 @@ function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
     ctx.restore();
 }
 
+/* ── Рендер рядка гліфами Яутжа ── */
+function drawYautja(str, x, y, cell, color){
+    ctx.save();
+    ctx.strokeStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 3;
+    ctx.lineWidth = Math.max(1, cell * 0.14); ctx.lineCap = 'round';
+    let gx = x;
+    for (const ch of str){
+        const strokes = yGlyph(ch);
+        for (const s of strokes){
+            ctx.beginPath();
+            ctx.moveTo(gx + s[0] * cell, y + s[1] * cell);
+            ctx.lineTo(gx + s[2] * cell, y + s[3] * cell);
+            ctx.stroke();
+        }
+        gx += cell * 0.82;
+    }
+    ctx.restore();
+}
+
+/* ── Приціл Хижака: трикутні брекети + три лазерні точки, що сходяться при лоці ── */
+function drawPredReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
+    ctx.save(); ctx.translate(cx, cy);
+    const R = (108 - 26 * lf) * dpr;
+    /* примарний зовнішній трикутник, контр-обертання */
+    ctx.save(); ctx.rotate(Math.PI - scanAngle * 0.4);
+    ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.14)';
+    ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++){
+        const a = -Math.PI / 2 + i * 2 * Math.PI / 3;
+        const x = Math.cos(a) * R * 1.32, y = Math.sin(a) * R * 1.32;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath(); ctx.stroke(); ctx.restore();
+
+    /* вершиною вниз; обертається доки шукає, завмирає на лоці */
+    ctx.rotate(Math.PI + scanAngle * 0.9 * (1 - lf));
+    ctx.strokeStyle = mainColor; ctx.shadowColor = mainColor;
+    ctx.shadowBlur = 8 + 10 * lf;
+    ctx.lineWidth = (4.5 + 2 * lf) * dpr; ctx.lineCap = 'butt';
+    const V = [];
+    for (let i = 0; i < 3; i++){
+        const a = -Math.PI / 2 + i * 2 * Math.PI / 3;
+        V.push([Math.cos(a) * R, Math.sin(a) * R]);
+    }
+    for (let i = 0; i < 3; i++){
+        const x1 = V[i][0], y1 = V[i][1], x2 = V[(i + 1) % 3][0], y2 = V[(i + 1) % 3][1];
+        ctx.beginPath();
+        ctx.moveTo(x1 + (x2 - x1) * 0.14, y1 + (y2 - y1) * 0.14);
+        ctx.lineTo(x1 + (x2 - x1) * 0.86, y1 + (y2 - y1) * 0.86);
+        ctx.stroke();
+    }
+    ctx.lineWidth = 2.5 * dpr;
+    for (let i = 0; i < 3; i++){
+        const a = -Math.PI / 2 + i * 2 * Math.PI / 3;
+        const ox = Math.cos(a) * R * 1.1, oy = Math.sin(a) * R * 1.1;
+        ctx.beginPath();
+        ctx.moveTo(ox - Math.sin(a) * 8 * dpr, oy + Math.cos(a) * 8 * dpr);
+        ctx.lineTo(ox + Math.sin(a) * 8 * dpr, oy - Math.cos(a) * 8 * dpr);
+        ctx.stroke();
+    }
+    /* три лазерні точки: сходяться, джитер падає при лоці */
+    const dR = (46 - 34 * lf) * dpr;
+    const jit = (lf > 0.7 ? 0.8 : 2) * dpr;
+    ctx.fillStyle = mainColor; ctx.shadowBlur = 12;
+    for (let i = 0; i < 3; i++){
+        const a = -Math.PI / 2 + i * 2 * Math.PI / 3;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * dR + (Math.random() - 0.5) * jit, Math.sin(a) * dR + (Math.random() - 0.5) * jit, (3.2 + 1.2 * lf) * dpr, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    if (lf > 0.92){
+        const pk = 0.5 + 0.5 * Math.sin(pulseTime * 5);
+        ctx.globalAlpha = 0.25 + 0.3 * pk;
+        ctx.beginPath(); ctx.arc(0, 0, 5 * dpr, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    /* клас цілі гліфами Яутжа під прицілом */
+    if (lf > 0.2 && ST.primary){
+        const s = ST.primary.cls.toUpperCase();
+        const shown = s.substring(0, Math.max(0, Math.floor(textTick / 3)));
+        const cell = 13 * dpr;
+        drawYautja(shown, cx - s.length * cell * 0.41, cy + 128 * dpr, cell, mainColor);
+    }
+}
+
 /* ── Тайп-блок біля ретикла ── */
 function drawDataBlock(cx, cy, dpr, mainColor){
     const lines = currentInfo();
+    const bx = currentPos.x > innerWidth * 0.55 ? cx - 250 * dpr : cx + 120 * dpr;
+    if (ST.vis === 1){
+        lines.forEach((l, i) => {
+            const chars = Math.floor(textTick - i * 4);
+            if (chars <= 0) return;
+            const s = (l.k + ' ' + l.v).toUpperCase();
+            drawYautja(s.substring(0, chars), bx, cy - 34 * dpr + i * 16 * dpr, 10 * dpr, mainColor);
+        });
+        const pp = ST.primary;
+        if (pp){
+            ctx.save();
+            ctx.font = (8 * dpr) + "px 'Share Tech Mono'";
+            ctx.fillStyle = mainColor; ctx.shadowBlur = 3; ctx.shadowColor = mainColor;
+            ctx.globalAlpha = ctx.globalAlpha * 0.55;
+            ctx.fillText('› ' + pp.cls.toUpperCase() + ' ' + Math.round(pp.score * 100) + '%', bx, cy - 34 * dpr + lines.length * 16 * dpr + 10 * dpr);
+            ctx.restore();
+        }
+        return;
+    }
     ctx.font = (11 * dpr) + "px 'Share Tech Mono'";
     ctx.shadowBlur = 4; ctx.shadowColor = mainColor;
     ctx.fillStyle = mainColor;
-    const bx = currentPos.x > innerWidth * 0.55 ? cx - 250 * dpr : cx + 120 * dpr;
     lines.forEach((l, i) => {
         const chars = Math.floor(textTick - i * 4);
         if (chars <= 0) return;
@@ -1401,7 +1584,8 @@ function draw(now){
     drawSecondary(dpr, T);
     if (p && targetPos.active) drawPrimaryBox(p, dpr, T, mainColor, rr, rg, rb);
     if (ST.locked) drawChildren(dpr, T, rr, rg, rb);
-    drawReticle(currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
+    if (ST.vis === 1) drawPredReticle(currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
+    else drawReticle(currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
     if (ST.lockF > 0.05){
         ctx.globalAlpha = ST.lockF;
         textTick += dt * 0.04;
@@ -1412,7 +1596,7 @@ function draw(now){
     drawCornerDeco(W, H, dpr);
     ctx.restore();
 
-    if (ST.locked && now > ST.nextPing){ AU.ping(); ST.nextPing = now + 2300; }
+    if (ST.locked && now > ST.nextPing){ if (ST.vis === 1) AU.triPing(); else AU.ping(); ST.nextPing = now + 2300; }
     if (ST.vis === 1 && now > ST.nextClicks){ AU.clicks(); ST.nextClicks = now + 3800 + Math.random() * 4600; }
 }
 
