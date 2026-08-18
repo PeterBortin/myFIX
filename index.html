@@ -1,812 +1,1458 @@
 <!DOCTYPE html>
-
-<html lang="ru">
+<!-- myFIX v2 // OPTICAL + PREDATOR THERMAL // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
+<html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>myFIX</title>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-            --red: #ff2020;
-            --mono: 'Share Tech Mono', monospace;
-            --sans: 'Rajdhani', sans-serif;
-        }
-        body {
-            margin: 0; background: #000; overflow: hidden;
-            font-family: var(--mono); user-select: none; cursor: crosshair;
-        }
-        #container { position: relative; width: 100vw; height: 100vh; }
-        video {
-            width: 100%; height: 100%; object-fit: cover; display: block;
-            filter: brightness(0.45) contrast(1.3) saturate(0.1) hue-rotate(180deg);
-        }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>myFIX v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --red: #ff2020;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Rajdhani', sans-serif;
+}
+html, body { overscroll-behavior: none; }
+body {
+    margin: 0; background: #000; overflow: hidden;
+    font-family: var(--mono); user-select: none; -webkit-user-select: none; cursor: crosshair;
+}
+#container { position: relative; width: 100vw; height: 100vh; touch-action: manipulation; }
 
-```
-    #scanlines {
-        position: absolute; inset: 0; pointer-events: none; z-index: 5;
-        background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px);
-        animation: scanScroll 8s linear infinite;
-    }
-    @keyframes scanScroll { from{background-position:0 0} to{background-position:0 100px} }
+/* Відео — fallback-шар, коли WebGL живий, ховається (opacity 0), але грає як texture source */
+video {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: brightness(0.45) contrast(1.3) saturate(0.1) hue-rotate(180deg);
+    transition: opacity 0.4s;
+}
+#glCanvas  { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; background: #000; }
+#hudCanvas { position: absolute; inset: 0; z-index: 6; width: 100%; height: 100%; pointer-events: none; }
 
-    #vignette {
-        position: absolute; inset: 0; pointer-events: none; z-index: 4;
-        background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
-    }
+#scanlines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px);
+    animation: scanScroll 8s linear infinite;
+}
+@keyframes scanScroll { from{background-position:0 0} to{background-position:0 100px} }
 
-    /* BOTTOM BAR */
-    #botbar {
-        position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
-        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 18px; z-index: 15; border-top: 1px solid rgba(255,255,255,0.07);
-    }
-    .coords { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; }
+#vignette {
+    position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%);
+}
 
-    /* TERMINAL */
-    #terminal {
-        position: absolute; bottom: 44px; left: 15px;
-        width: 280px; max-height: 180px; overflow: hidden; z-index: 15; pointer-events: none;
-    }
-    .log-entry {
-        font-size: 10px; letter-spacing: 1.5px; line-height: 1.8;
-        text-transform: uppercase; color: rgba(255,255,255,0.5);
-        display: flex; gap: 8px; align-items: baseline; animation: fadeIn 0.3s ease;
-    }
-    .log-entry.threat { color: var(--red); }
-    .log-entry.info   { color: rgba(255,255,255,0.6); }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1} }
-    .log-ts     { color: rgba(255,255,255,0.2); flex-shrink: 0; }
-    .log-prefix { color: rgba(255,255,255,0.25); }
-    #cursor {
-        display: inline-block; width: 7px; height: 12px;
-        background: rgba(255,255,255,0.5); animation: blink 0.8s steps(1) infinite;
-        vertical-align: middle; margin-left: 2px;
-    }
-    @keyframes blink { 50%{opacity:0} }
+/* BOTTOM BAR */
+#botbar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
+    z-index: 16; border-top: 1px solid rgba(255,255,255,0.07);
+}
+#botLeft  { display: flex; flex-direction: column; gap: 2px; }
+#botRight { display: flex; gap: 8px; }
+.coords { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; }
 
-    /* STATUS PANEL (top-right) */
-    #statusPanel {
-        position: absolute; top: 15px; right: 15px;
-        width: 185px; z-index: 15; display: flex; flex-direction: column; gap: 5px;
-    }
-    .sp-row {
-        display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 4px;
-    }
-    .sp-key {
-        font-family: var(--sans); font-size: 9px; font-weight: 700;
-        letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.3);
-    }
-    .sp-val { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1px; }
-    .sp-val.active { color: var(--red); text-shadow: 0 0 8px var(--red); }
-    .bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.1); }
-    .bar-fill  { height: 100%; background: rgba(255,255,255,0.5); transition: width 0.3s; }
-    .bar-fill.danger { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.hudBtn {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.7); font-family: var(--sans);
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    padding: 9px 14px; cursor: pointer; text-transform: uppercase; touch-action: manipulation;
+}
+.hudBtn.on { border-color: var(--red); color: var(--red); text-shadow: 0 0 8px var(--red); box-shadow: inset 0 0 10px rgba(255,32,32,0.2); }
+.hudBtn.off { opacity: 0.35; text-decoration: line-through; }
+.hudBtn:disabled { opacity: 0.15; }
 
-    /* START BUTTON */
-    #startBtn {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-        background: none; border: none; color: #fff;
-        font-family: var(--sans); font-size: 11px; font-weight: 700;
-        letter-spacing: 5px; text-transform: uppercase;
-        cursor: pointer; z-index: 20; outline: none; padding: 0;
-    }
-    #startBtn .btn-inner { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-    #startBtn .btn-ring  { width: 80px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
-    .ring-svg  { position: absolute; inset: 0;   animation: spinRing 4s linear infinite; }
-    .ring-svg2 { position: absolute; inset: 6px; animation: spinRing 7s linear infinite reverse; }
-    @keyframes spinRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-    #startBtn .btn-text { letter-spacing: 6px; opacity: 0.7; }
-    #startBtn:hover .btn-text { opacity: 1; }
-    #startBtn:hover .ring-svg  { animation-duration: 1.5s; }
+/* TERMINAL */
+#terminal {
+    position: absolute; bottom: calc(78px + env(safe-area-inset-bottom)); left: 15px;
+    width: 280px; max-height: 180px; overflow: hidden; z-index: 15; pointer-events: none;
+}
+.log-entry {
+    font-size: 10px; letter-spacing: 1.5px; line-height: 1.8;
+    text-transform: uppercase; color: rgba(255,255,255,0.5);
+    display: flex; gap: 8px; align-items: baseline; animation: fadeIn 0.3s ease;
+}
+.log-entry.threat { color: var(--red); }
+.log-entry.info   { color: rgba(255,255,255,0.6); }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1} }
+.log-ts     { color: rgba(255,255,255,0.2); flex-shrink: 0; }
+.log-prefix { color: rgba(255,255,255,0.25); }
+#cursor {
+    display: inline-block; width: 7px; height: 12px;
+    background: rgba(255,255,255,0.5); animation: blink 0.8s steps(1) infinite;
+    vertical-align: middle; margin-left: 2px;
+}
+@keyframes blink { 50%{opacity:0} }
 
-    /* EW ALERT */
-    #ewAlert {
-        position: absolute; top: 15px; right: 210px;
-        font-family: var(--sans); font-size: 9px; font-weight: 700;
-        letter-spacing: 3px; color: var(--red);
-        opacity: 0; transition: opacity 0.2s; z-index: 15; text-transform: uppercase;
-    }
-    #ewAlert.show { opacity: 1; }
+/* STATUS PANEL */
+#statusPanel {
+    position: absolute; top: 15px; right: 15px;
+    width: 185px; z-index: 15; display: flex; flex-direction: column; gap: 5px;
+}
+.sp-row {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 4px;
+}
+.sp-key {
+    font-family: var(--sans); font-size: 9px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.3);
+}
+.sp-val { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1px; }
+.sp-val.active { color: var(--red); text-shadow: 0 0 8px var(--red); }
+.bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.1); }
+.bar-fill { height: 100%; background: rgba(255,255,255,0.5); transition: width 0.3s; }
+.bar-fill.danger { background: var(--red); box-shadow: 0 0 6px var(--red); }
 
-    /* THREAT BOX */
-    #threatBox {
-        position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
-        z-index: 15; width: 170px; opacity: 0; transition: opacity 0.4s;
-    }
-    #threatBox.show { opacity: 1; }
-    .tb-header {
-        font-family: var(--sans); font-size: 9px; font-weight: 700;
-        letter-spacing: 3px; color: var(--red);
-        border-bottom: 1px solid rgba(255,32,32,0.3);
-        padding-bottom: 6px; margin-bottom: 8px; text-transform: uppercase;
-    }
-    .tbi { font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1px; line-height: 2; }
-    .tbi-key { color: rgba(255,255,255,0.3); font-size: 9px; }
+/* START */
+#startBtn {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: none; border: none; color: #fff;
+    font-family: var(--sans); font-size: 11px; font-weight: 700;
+    letter-spacing: 5px; text-transform: uppercase;
+    cursor: pointer; z-index: 20; outline: none; padding: 0;
+}
+#startBtn .btn-inner { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+#startBtn .btn-ring  { width: 80px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
+.ring-svg  { position: absolute; inset: 0;   animation: spinRing 4s linear infinite; }
+.ring-svg2 { position: absolute; inset: 6px; animation: spinRing 7s linear infinite reverse; }
+@keyframes spinRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+#startBtn .btn-text { letter-spacing: 6px; opacity: 0.7; }
+#startBtn:hover .btn-text { opacity: 1; }
+#startBtn:hover .ring-svg  { animation-duration: 1.5s; }
 
-    /* ════════════════════════════════════════
-       CAPTURE CARD
-       [portrait 130×130] [meta panel]
-    ════════════════════════════════════════ */
-    #captureCard {
-        position: absolute; top: 14px; left: 14px;
-        z-index: 20; display: flex; flex-direction: row;
-        opacity: 0; pointer-events: none;
-        transition: opacity 0.3s ease;
-        /* subtle outer glow */
-        filter: drop-shadow(0 0 8px rgba(255,32,32,0.35));
-    }
-    #captureCard.show { opacity: 1; pointer-events: auto; }
+/* EW */
+#ewAlert {
+    position: absolute; top: 15px; right: 210px;
+    font-family: var(--sans); font-size: 9px; font-weight: 700;
+    letter-spacing: 3px; color: var(--red);
+    opacity: 0; transition: opacity 0.2s; z-index: 15; text-transform: uppercase;
+}
+#ewAlert.show { opacity: 1; }
 
-    /* Portrait image */
-    #portraitWrap {
-        position: relative; width: 130px; height: 130px; flex-shrink: 0;
-        background: #000; border: 1px solid rgba(255,32,32,0.5); overflow: hidden;
-    }
-    #portraitCanvas { width: 100%; height: 100%; display: block;
-        filter: brightness(1.1) contrast(1.25) saturate(0.12) hue-rotate(180deg); }
+/* THREAT / COMPOSITE BOX */
+#threatBox {
+    position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+    z-index: 15; width: 175px; opacity: 0; transition: opacity 0.4s; pointer-events: none;
+}
+#threatBox.show { opacity: 1; }
+.tb-header {
+    font-family: var(--sans); font-size: 9px; font-weight: 700;
+    letter-spacing: 3px; color: var(--red);
+    border-bottom: 1px solid rgba(255,32,32,0.3);
+    padding-bottom: 6px; margin-bottom: 8px; text-transform: uppercase;
+}
+.tbi { font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 1px; line-height: 1.9; display: flex; justify-content: space-between; gap: 8px; }
+.tbi-key { color: rgba(255,255,255,0.3); font-size: 9px; }
+.tbi-red { color: var(--red); text-shadow: 0 0 5px var(--red); }
+.tb-sub {
+    font-family: var(--sans); font-size: 8px; font-weight: 700; letter-spacing: 2px;
+    color: rgba(255,255,255,0.28); text-transform: uppercase;
+    margin: 7px 0 3px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 5px;
+}
 
-    /* Corner brackets */
-    .pcorner {
-        position: absolute; width: 9px; height: 9px;
-        border-color: var(--red); border-style: solid; z-index: 2;
-    }
-    .pcorner.tl { top:3px;    left:3px;   border-width: 1.5px 0 0 1.5px; }
-    .pcorner.tr { top:3px;    right:3px;  border-width: 1.5px 1.5px 0 0; }
-    .pcorner.bl { bottom:3px; left:3px;   border-width: 0 0 1.5px 1.5px; }
-    .pcorner.br { bottom:3px; right:3px;  border-width: 0 1.5px 1.5px 0; }
+/* CAPTURE CARD */
+#captureCard {
+    position: absolute; top: 14px; left: 14px;
+    z-index: 20; display: flex; flex-direction: row;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+    filter: drop-shadow(0 0 8px rgba(255,32,32,0.35));
+}
+#captureCard.show { opacity: 1; pointer-events: auto; }
+#portraitWrap {
+    position: relative; width: 130px; height: 130px; flex-shrink: 0;
+    background: #000; border: 1px solid rgba(255,32,32,0.5); overflow: hidden;
+}
+#portraitCanvas { width: 100%; height: 100%; display: block; }
+#portraitCanvas.rawlook { filter: brightness(1.1) contrast(1.25) saturate(0.12) hue-rotate(180deg); }
+.pcorner {
+    position: absolute; width: 9px; height: 9px;
+    border-color: var(--red); border-style: solid; z-index: 2;
+}
+.pcorner.tl { top:3px;    left:3px;   border-width: 1.5px 0 0 1.5px; }
+.pcorner.tr { top:3px;    right:3px;  border-width: 1.5px 1.5px 0 0; }
+.pcorner.bl { bottom:3px; left:3px;   border-width: 0 0 1.5px 1.5px; }
+.pcorner.br { bottom:3px; right:3px;  border-width: 0 1.5px 1.5px 0; }
+#pScanlines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 3;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.22) 2px, rgba(0,0,0,0.22) 3px);
+}
+#pCross {
+    position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+}
+#pCross::before {
+    content: ''; width: 16px; height: 16px;
+    border: 1px solid rgba(255,32,32,0.5); border-radius: 50%;
+}
+#pStamp {
+    position: absolute; bottom: 4px; left: 4px; right: 4px; z-index: 5;
+    font-size: 7px; font-family: var(--mono);
+    color: rgba(255,32,32,0.65); letter-spacing: 0.8px;
+    display: flex; justify-content: space-between;
+}
+#capturedFlash {
+    position: absolute; inset: 0; z-index: 6;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--sans); font-size: 10px; font-weight: 700;
+    letter-spacing: 4px; color: var(--red); text-transform: uppercase;
+    opacity: 0; pointer-events: none;
+}
+#capturedFlash.flash { animation: capFlash 0.9s ease forwards; }
+@keyframes capFlash { 0%{opacity:1} 60%{opacity:0.7} 100%{opacity:0} }
+#captureMeta {
+    width: 158px; background: rgba(0,0,0,0.82);
+    border: 1px solid rgba(255,32,32,0.25); border-left: none;
+    padding: 7px 9px; display: flex; flex-direction: column; gap: 0;
+}
+.cm-header {
+    font-family: var(--sans); font-size: 8px; font-weight: 700;
+    letter-spacing: 3px; color: var(--red);
+    border-bottom: 1px solid rgba(255,32,32,0.3);
+    padding-bottom: 5px; margin-bottom: 5px; text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.cm-blink { width: 5px; height: 5px; border-radius: 50%; background: var(--red); animation: blink 0.6s steps(1) infinite; }
+.cm-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2.5px 0;
+}
+.cm-key {
+    font-family: var(--sans); font-size: 8px; font-weight: 700;
+    letter-spacing: 1.8px; color: rgba(255,255,255,0.25);
+    text-transform: uppercase; flex-shrink: 0;
+}
+.cm-val { font-family: var(--mono); font-size: 9px; color: rgba(255,255,255,0.65); letter-spacing: 0.8px; text-align: right; }
+.cm-val.red { color: var(--red); text-shadow: 0 0 5px var(--red); }
 
-    /* Scanlines on portrait */
-    #pScanlines {
-        position: absolute; inset: 0; pointer-events: none; z-index: 3;
-        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.22) 2px, rgba(0,0,0,0.22) 3px);
-    }
-    /* Crosshair */
-    #pCross {
-        position: absolute; inset: 0; z-index: 4; pointer-events: none;
-        display: flex; align-items: center; justify-content: center;
-    }
-    #pCross::before {
-        content: ''; width: 16px; height: 16px;
-        border: 1px solid rgba(255,32,32,0.5); border-radius: 50%;
-    }
-    /* Timestamp */
-    #pStamp {
-        position: absolute; bottom: 4px; left: 4px; right: 4px; z-index: 5;
-        font-size: 7px; font-family: var(--mono);
-        color: rgba(255,32,32,0.65); letter-spacing: 0.8px;
-        display: flex; justify-content: space-between;
-    }
-    /* CAPTURED flash */
-    #capturedFlash {
-        position: absolute; inset: 0; z-index: 6;
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--sans); font-size: 10px; font-weight: 700;
-        letter-spacing: 4px; color: var(--red); text-transform: uppercase;
-        opacity: 0; pointer-events: none;
-    }
-    #capturedFlash.flash { animation: capFlash 0.9s ease forwards; }
-    @keyframes capFlash { 0%{opacity:1} 60%{opacity:0.7} 100%{opacity:0} }
+/* TAP HINT */
+#tapHint {
+    position: absolute; bottom: calc(140px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    font-family: var(--sans); font-size: 10px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase; color: rgba(255,255,255,0.32);
+    z-index: 15; pointer-events: none; opacity: 0; transition: opacity 0.4s;
+    white-space: nowrap; animation: hintPulse 2s ease-in-out infinite;
+}
+#tapHint.show { opacity: 1; }
+@keyframes hintPulse { 0%,100%{opacity:0.32} 50%{opacity:0.65} }
+#tapHint::before { content: '[ '; color: var(--red); }
+#tapHint::after  { content: ' ]'; color: var(--red); }
 
-    /* Meta panel */
-    #captureMeta {
-        width: 158px; background: rgba(0,0,0,0.82);
-        border: 1px solid rgba(255,32,32,0.25); border-left: none;
-        padding: 7px 9px; display: flex; flex-direction: column; gap: 0;
-    }
-    .cm-header {
-        font-family: var(--sans); font-size: 8px; font-weight: 700;
-        letter-spacing: 3px; color: var(--red);
-        border-bottom: 1px solid rgba(255,32,32,0.3);
-        padding-bottom: 5px; margin-bottom: 5px; text-transform: uppercase;
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .cm-blink {
-        width: 5px; height: 5px; border-radius: 50%;
-        background: var(--red); animation: blink 0.6s steps(1) infinite;
-    }
-    .cm-row {
-        display: flex; justify-content: space-between; align-items: baseline;
-        border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2.5px 0;
-    }
-    .cm-key {
-        font-family: var(--sans); font-size: 8px; font-weight: 700;
-        letter-spacing: 1.8px; color: rgba(255,255,255,0.25);
-        text-transform: uppercase; flex-shrink: 0;
-    }
-    .cm-val {
-        font-family: var(--mono); font-size: 9px;
-        color: rgba(255,255,255,0.65); letter-spacing: 0.8px; text-align: right;
-    }
-    .cm-val.red { color: var(--red); text-shadow: 0 0 5px var(--red); }
+/* FLASH */
+#flashOverlay { position: absolute; inset: 0; z-index: 50; background: rgba(255,255,255,0); pointer-events: none; }
+#flashOverlay.flash { animation: scrFlash 0.25s ease forwards; }
+@keyframes scrFlash { 0%{background:rgba(255,255,255,0.2)} 100%{background:rgba(255,255,255,0)} }
 
-    /* TAP HINT */
-    #tapHint {
-        position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
-        font-family: var(--sans); font-size: 10px; font-weight: 700;
-        letter-spacing: 4px; text-transform: uppercase; color: rgba(255,255,255,0.32);
-        z-index: 15; pointer-events: none; opacity: 0; transition: opacity 0.4s;
-        white-space: nowrap; animation: hintPulse 2s ease-in-out infinite;
-    }
-    #tapHint.show { opacity: 1; }
-    @keyframes hintPulse { 0%,100%{opacity:0.32} 50%{opacity:0.65} }
-    #tapHint::before { content: '[ '; color: var(--red); }
-    #tapHint::after  { content: ' ]'; color: var(--red); }
-
-    /* SCREEN FLASH */
-    #flashOverlay {
-        position: absolute; inset: 0; z-index: 50;
-        background: rgba(255,255,255,0); pointer-events: none;
-    }
-    #flashOverlay.flash { animation: scrFlash 0.25s ease forwards; }
-    @keyframes scrFlash { 0%{background:rgba(255,255,255,0.2)} 100%{background:rgba(255,255,255,0)} }
+@media (max-width: 480px) {
+    #coordsR { display: none; }
+    #statusPanel { width: 160px; }
+    #threatBox { width: 150px; right: 10px; }
+    #captureMeta { width: 146px; }
+}
 </style>
-```
-
 </head>
 <body>
 <div id="container">
 
-```
-<!-- START BUTTON -->
-<button id="startBtn">
-    <div class="btn-inner">
-        <div class="btn-ring">
-            <svg class="ring-svg" viewBox="0 0 80 80" fill="none">
-                <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="8 4"/>
-                <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-dasharray="20 160" stroke-linecap="round"/>
-            </svg>
-            <svg class="ring-svg2" viewBox="0 0 68 68" fill="none">
-                <circle cx="34" cy="34" r="30" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3 6"/>
-            </svg>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="2" fill="white" opacity="0.9"/>
-                <line x1="12" y1="4"  x2="12" y2="8"  stroke="white" stroke-width="1.5" opacity="0.6"/>
-                <line x1="12" y1="16" x2="12" y2="20" stroke="white" stroke-width="1.5" opacity="0.6"/>
-                <line x1="4"  y1="12" x2="8"  y2="12" stroke="white" stroke-width="1.5" opacity="0.6"/>
-                <line x1="16" y1="12" x2="20" y2="12" stroke="white" stroke-width="1.5" opacity="0.6"/>
-            </svg>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="glCanvas"></canvas>
+    <canvas id="hudCanvas"></canvas>
+
+    <div id="vignette"></div>
+    <div id="scanlines"></div>
+
+    <button id="startBtn">
+        <div class="btn-inner">
+            <div class="btn-ring">
+                <svg class="ring-svg" viewBox="0 0 80 80" fill="none">
+                    <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="8 4"/>
+                    <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-dasharray="20 160" stroke-linecap="round"/>
+                </svg>
+                <svg class="ring-svg2" viewBox="0 0 68 68" fill="none">
+                    <circle cx="34" cy="34" r="30" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3 6"/>
+                </svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="2" fill="white" opacity="0.9"/>
+                    <line x1="12" y1="4"  x2="12" y2="8"  stroke="white" stroke-width="1.5" opacity="0.6"/>
+                    <line x1="12" y1="16" x2="12" y2="20" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                    <line x1="4"  y1="12" x2="8"  y2="12" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                    <line x1="16" y1="12" x2="20" y2="12" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                </svg>
+            </div>
+            <span class="btn-text">initialize system</span>
         </div>
-        <span class="btn-text">initialize system</span>
-    </div>
-</button>
+    </button>
 
-<!-- FLASH -->
-<div id="flashOverlay"></div>
+    <div id="flashOverlay"></div>
 
-<!-- BG OVERLAYS -->
-<div id="vignette"></div>
-<div id="scanlines"></div>
-
-<!-- CAPTURE CARD -->
-<div id="captureCard">
-    <div id="portraitWrap">
-        <canvas id="portraitCanvas"></canvas>
-        <div class="pcorner tl"></div>
-        <div class="pcorner tr"></div>
-        <div class="pcorner bl"></div>
-        <div class="pcorner br"></div>
-        <div id="pScanlines"></div>
-        <div id="pCross"></div>
-        <div id="pStamp">
-            <span id="pStampTime">--:--:--</span>
-            <span id="pStampId">ID:------</span>
+    <div id="captureCard">
+        <div id="portraitWrap">
+            <canvas id="portraitCanvas"></canvas>
+            <div class="pcorner tl"></div>
+            <div class="pcorner tr"></div>
+            <div class="pcorner bl"></div>
+            <div class="pcorner br"></div>
+            <div id="pScanlines"></div>
+            <div id="pCross"></div>
+            <div id="pStamp">
+                <span id="pStampTime">--:--:--</span>
+                <span id="pStampId">ID:------</span>
+            </div>
+            <div id="capturedFlash">CAPTURED</div>
         </div>
-        <div id="capturedFlash">CAPTURED</div>
+        <div id="captureMeta">
+            <div class="cm-header"><span>SUBJ DATA</span><div class="cm-blink"></div></div>
+            <div id="cmRows"></div>
+        </div>
     </div>
-    <div id="captureMeta">
-        <div class="cm-header"><span>SUBJ DATA</span><div class="cm-blink"></div></div>
-        <div id="cmRows"></div>
+
+    <div id="tapHint">TAP TO CAPTURE</div>
+
+    <div id="statusPanel" style="display:none">
+        <div class="sp-row"><span class="sp-key">network</span><span class="sp-val active">ONLINE</span></div>
+        <div class="sp-row"><span class="sp-key">model</span><span class="sp-val" id="modelStat">LOADING</span></div>
+        <div class="sp-row"><span class="sp-key">vision</span><span class="sp-val" id="visVal">OPTICAL</span></div>
+        <div class="sp-row"><span class="sp-key">mode</span><span class="sp-val" id="modeVal">PASSIVE</span></div>
+        <div class="sp-row"><span class="sp-key">objects</span><span class="sp-val" id="objCount">00</span></div>
+        <div class="sp-row"><span class="sp-key">lock</span><span class="sp-val" id="lockStat">--</span></div>
+        <div class="sp-row"><span class="sp-key">conf</span><div class="bar-wrap"><div class="bar-fill" id="confBar" style="width:0%"></div></div></div>
+        <div class="sp-row"><span class="sp-key">ew</span><div class="bar-wrap"><div class="bar-fill" id="ewBar" style="width:0%"></div></div></div>
+        <div class="sp-row"><span class="sp-key">captures</span><span class="sp-val" id="captureStat">0</span></div>
     </div>
-</div>
 
-<!-- TAP HINT -->
-<div id="tapHint">TAP TO CAPTURE</div>
+    <div id="ewAlert">⚠ EW INTERFERENCE</div>
 
-<!-- STATUS PANEL -->
-<div id="statusPanel" style="display:none">
-    <div class="sp-row"><span class="sp-key">network</span><span class="sp-val active">ONLINE</span></div>
-    <div class="sp-row"><span class="sp-key">model</span><span class="sp-val" id="modelStat">LOADING</span></div>
-    <div class="sp-row"><span class="sp-key">mode</span><span class="sp-val" id="modeVal">PASSIVE</span></div>
-    <div class="sp-row"><span class="sp-key">objects</span><span class="sp-val" id="objCount">00</span></div>
-    <div class="sp-row"><span class="sp-key">lock</span><span class="sp-val" id="lockStat">--</span></div>
-    <div class="sp-row"><span class="sp-key">conf</span><div class="bar-wrap"><div class="bar-fill" id="confBar" style="width:0%"></div></div></div>
-    <div class="sp-row"><span class="sp-key">ew</span><div class="bar-wrap"><div class="bar-fill" id="ewBar" style="width:0%"></div></div></div>
-    <div class="sp-row"><span class="sp-key">captures</span><span class="sp-val" id="captureStat">0</span></div>
-</div>
+    <div id="threatBox">
+        <div class="tb-header">// target acquired</div>
+        <div id="threatLines"></div>
+    </div>
 
-<!-- EW ALERT -->
-<div id="ewAlert">⚠ EW INTERFERENCE</div>
+    <div id="terminal"><span id="cursor"></span></div>
 
-<!-- THREAT BOX -->
-<div id="threatBox">
-    <div class="tb-header">// target acquired</div>
-    <div id="threatLines"></div>
-</div>
-
-<!-- TERMINAL -->
-<div id="terminal"><span id="cursor"></span></div>
-
-<!-- BOTTOM BAR -->
-<div id="botbar" style="display:none">
-    <span class="coords" id="coordsL">LAT 00°00'00"N  LON 000°00'00"E</span>
-    <span class="coords" id="coordsR">ALT --m  SPD --kts  HDG --°</span>
-</div>
-
-<video id="video" autoplay playsinline muted></video>
-<canvas id="hudCanvas"></canvas>
-```
+    <div id="botbar" style="display:none">
+        <div id="botLeft">
+            <span class="coords" id="coordsL">LAT 00°00'00"N  LON 000°00'00"E</span>
+            <span class="coords" id="coordsR">ALT --m  SPD --kts  HDG --°</span>
+        </div>
+        <div id="botRight">
+            <button class="hudBtn" id="thermalBtn">THR</button>
+            <button class="hudBtn" id="muteBtn">SND</button>
+        </div>
+    </div>
 
 </div>
+<script type="module">
+import { FilesetResolver, ObjectDetector, PoseLandmarker, FaceDetector } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+/*__PURE_BEGIN__*/
+/* ── Чиста логіка: без DOM, тестується headless ── */
+const THREAT_HIGH = ['person','car','truck','bus','motorcycle','airplane','boat','train'];
+const THREAT_MED  = ['bicycle','horse','cow','dog','cat','bird','sheep','bear','elephant','zebra','giraffe'];
+const ITEM_CLASSES = ['cell phone','backpack','handbag','bottle','knife','scissors','umbrella','tie','suitcase','laptop','book','cup','baseball bat','sports ball','remote','wine glass','frisbee','skateboard','tennis racket'];
+const ITEM_ALERT = ['knife','scissors','baseball bat'];
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
-
-<script>
-/* ── Threat tiers ── */
-const THREAT_HIGH   = ['person','car','truck','bus','motorcycle','airplane','boat','train'];
-const THREAT_MEDIUM = ['bicycle','horse','cow','dog','cat','bird','sheep','bear','elephant','zebra','giraffe'];
-function getThreat(cls) {
-    if (THREAT_HIGH.includes(cls))   return 'HIGH';
-    if (THREAT_MEDIUM.includes(cls)) return 'MED';
+function getThreat(cls){
+    if (THREAT_HIGH.includes(cls)) return 'HIGH';
+    if (THREAT_MED.includes(cls))  return 'MED';
     return 'LOW';
 }
 
+/* object-fit:cover мапінг: відео-пікселі -> екранні css-пікселі */
+function coverTransform(vw, vh, sw, sh){
+    const scale = Math.max(sw / vw, sh / vh);
+    return { scale, ox: (sw - vw * scale) / 2, oy: (sh - vh * scale) / 2 };
+}
+function v2s(x, y, T){ return { x: x * T.scale + T.ox, y: y * T.scale + T.oy }; }
+
+function iou(a, b){
+    const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
+    const x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+    const iw = Math.max(0, x2 - x1), ih = Math.max(0, y2 - y1);
+    const inter = iw * ih;
+    const uni = a.w * a.h + b.w * b.h - inter;
+    return uni > 0 ? inter / uni : 0;
+}
+/* яка частка area(child) лежить всередині parent */
+function containment(child, parent){
+    const x1 = Math.max(child.x, parent.x), y1 = Math.max(child.y, parent.y);
+    const x2 = Math.min(child.x + child.w, parent.x + parent.w);
+    const y2 = Math.min(child.y + child.h, parent.y + parent.h);
+    const iw = Math.max(0, x2 - x1), ih = Math.max(0, y2 - y1);
+    const a = child.w * child.h;
+    return a > 0 ? (iw * ih) / a : 0;
+}
+function lerpBox(a, b, k){
+    return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, w: a.w + (b.w - a.w) * k, h: a.h + (b.h - a.h) * k };
+}
+
+let __uid = 0;
+function nextUid(){ __uid = (__uid + 1) % 4096; return '0x' + __uid.toString(16).toUpperCase().padStart(3, '0'); }
+
+/* IoU-трекер: стабільні ID, згладжування боксів, голосування класу */
+function updateTracks(tracks, dets, now, opts){
+    const o = opts || {};
+    const iouThr  = o.iouThr  !== undefined ? o.iouThr  : 0.3;
+    const ttl     = o.ttl     !== undefined ? o.ttl     : 700;
+    const smooth  = o.smooth  !== undefined ? o.smooth  : 0.4;
+    const unmatched = new Set(dets.map((_, i) => i));
+    const order = tracks.slice().sort((a, b) => b.hits - a.hits);
+    for (const t of order){
+        let best = -1, bestV = iouThr;
+        for (const i of unmatched){
+            const v = iou(t.box, dets[i].box);
+            if (v > bestV){ bestV = v; best = i; }
+        }
+        if (best >= 0){
+            const d = dets[best];
+            unmatched.delete(best);
+            t.box = lerpBox(t.box, d.box, smooth);
+            t.score = t.score * (1 - smooth) + d.score * smooth;
+            t.votes[d.cls] = (t.votes[d.cls] || 0) + 1;
+            if (d.cls !== t.cls && t.votes[d.cls] > (t.votes[t.cls] || 0)) t.cls = d.cls;
+            t.seen = now; t.hits++;
+        }
+    }
+    for (const i of unmatched){
+        const d = dets[i];
+        tracks.push({
+            id: nextUid(),
+            box: { x: d.box.x, y: d.box.y, w: d.box.w, h: d.box.h },
+            cls: d.cls, score: d.score,
+            votes: { [d.cls]: 1 },
+            born: now, seen: now, hits: 1
+        });
+    }
+    return tracks.filter(t => now - t.seen < ttl);
+}
+
+/* батьківська ціль: липкість до поточної, далі ранг загрози, далі площа*conf */
+function pickPrimary(tracks, currentId){
+    const alive = tracks.filter(t => t.hits >= 2);
+    if (currentId){
+        const cur = alive.find(t => t.id === currentId);
+        if (cur) return cur;
+    }
+    if (!alive.length) return null;
+    const rank = t => { const th = getThreat(t.cls); return th === 'HIGH' ? 2 : th === 'MED' ? 1 : 0; };
+    return alive.slice().sort((a, b) =>
+        (rank(b) - rank(a)) || (b.box.w * b.box.h * b.score - a.box.w * a.box.h * a.score)
+    )[0];
+}
+
+/* дочірні предмети: item-класи, чий бокс лежить у боксі людини */
+function attachItems(parent, tracks){
+    if (!parent || parent.cls !== 'person') return [];
+    const out = [];
+    for (const t of tracks){
+        if (t.id === parent.id) continue;
+        if (!ITEM_CLASSES.includes(t.cls)) continue;
+        if (containment(t.box, parent.box) > 0.35) out.push({ track: t, alert: ITEM_ALERT.includes(t.cls) });
+    }
+    return out;
+}
+
+/* дочірня анатомія з 33 pose-лендмарок (нормалізовані -> відео-пікселі) */
+function anatomyNodes(lm, vw, vh, minVis){
+    if (!lm || lm.length < 25) return [];
+    const mv = minVis === undefined ? 0.5 : minVis;
+    const P = i => ({ x: lm[i].x * vw, y: lm[i].y * vh, v: lm[i].visibility === undefined ? 1 : lm[i].visibility });
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, v: Math.min(a.v, b.v) });
+    const nose = P(0), ls = P(11), rs = P(12), lw = P(15), rw = P(16), lh = P(23), rh = P(24);
+    const nodes = [
+        { key: 'HEAD',   pt: nose },
+        { key: 'TORSO',  pt: mid(mid(ls, rs), mid(lh, rh)) },
+        { key: 'HAND·L', pt: lw },
+        { key: 'HAND·R', pt: rw }
+    ];
+    return nodes.filter(n => n.pt.v > mv);
+}
+
+function easeWipe(t){
+    t = Math.min(1, Math.max(0, t));
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+/*__PURE_END__*/
+
+/* ── Конфіг ── */
+const CFG = {
+    objMs: 120, poseMs: 160, faceMs: 260,
+    trackTTL: 700, iouThr: 0.3, smooth: 0.4,
+    lockDist: 130, glMaxDpr: 1.5, hudMaxDpr: 2, wipeMs: 1400
+};
+const WASM_URL   = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
+const MODEL_OBJ  = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite';
+const MODEL_POSE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const MODEL_FACE = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+
 /* ── DOM ── */
-const video       = document.getElementById('video');
-const canvas      = document.getElementById('hudCanvas');
-const ctx         = canvas.getContext('2d');
-const startBtn    = document.getElementById('startBtn');
-const terminal    = document.getElementById('terminal');
-const cursor      = document.getElementById('cursor');
-const captureCard = document.getElementById('captureCard');
-const portCanvas  = document.getElementById('portraitCanvas');
-const portCtx     = portCanvas.getContext('2d');
-const tapHint     = document.getElementById('tapHint');
-const flashOv     = document.getElementById('flashOverlay');
+const $ = id => document.getElementById(id);
+const container = $('container'), video = $('video');
+const canvas = $('hudCanvas'), glCanvas = $('glCanvas');
+const ctx = canvas.getContext('2d');
+const startBtn = $('startBtn'), terminal = $('terminal'), cursor = $('cursor');
+const captureCard = $('captureCard'), portCanvas = $('portraitCanvas'), portCtx = portCanvas.getContext('2d');
+const tapHint = $('tapHint'), flashOv = $('flashOverlay'), ewAlert = $('ewAlert');
+const statusPanel = $('statusPanel'), botbar = $('botbar');
+const threatBox = $('threatBox'), threatLines = $('threatLines');
+const modelStat = $('modelStat'), modeVal = $('modeVal'), visVal = $('visVal');
+const objCount = $('objCount'), lockStat = $('lockStat'), confBar = $('confBar'), ewBar = $('ewBar'), captureStat = $('captureStat');
+const thermalBtn = $('thermalBtn'), muteBtn = $('muteBtn');
+const cmRows = $('cmRows'), pStampTime = $('pStampTime'), pStampId = $('pStampId'), capturedFlash = $('capturedFlash');
+const coordsL = $('coordsL'), coordsR = $('coordsR');
 
-/* ── State ── */
-let model, allPredictions = [], primaryTarget = null;
-let currentPos  = { x: innerWidth/2,  y: innerHeight/2 };
-let targetPos   = { x: innerWidth/2,  y: innerHeight/2, active: false };
-let isLocked    = false, lockFactor = 0;
-let pulseTime   = 0, scanAngle = 0, textTick = 0;
-let infoLines   = [], glitchActive = 0;
-let captureCount = 0, cardVisible = false;
-let ewIntensity = 0, ewTimer = 0;
-let lat = 55.7558 + (Math.random()-0.5)*0.01;
-let lon = 37.6173 + (Math.random()-0.5)*0.01;
+/* ── Стан ── */
+const ST = {
+    running: false, booting: false,
+    tracks: [], primary: null, primaryId: null, lockedId: null,
+    items: [], anatomy: [], faceBox: null, poseAt: 0, faceAt: 0,
+    locked: false, lockF: 0,
+    vis: 0, wipeFrom: 0, wipeTo: 0, wipeStart: -1e9,
+    ew: 0, nextEW: Infinity, nextClicks: 0, nextPing: 0,
+    captures: 0, cardVisible: false, tSig: '', wake: null
+};
+let objDet = null, poseDet = null, faceDet = null;
+let lastObj = 0, lastPose = 0, lastFace = 0;
+let currentPos = { x: innerWidth / 2, y: innerHeight / 2 };
+let targetPos  = { x: innerWidth / 2, y: innerHeight / 2, active: false };
+let pulseTime = 0, scanAngle = 0, textTick = 0, glitchActive = 0;
+let lastFrame = performance.now(), lastGl = 0, hudDpr = 1;
+const alertLog = new Map();
+let lat = 55.7558 + (Math.random() - 0.5) * 0.01;
+let lon = 37.6173 + (Math.random() - 0.5) * 0.01;
 
-/* ── Terminal ── */
-function ts() {
+function coverT(){ return coverTransform(video.videoWidth || 640, video.videoHeight || 480, innerWidth, innerHeight); }
+function resize(){
+    hudDpr = Math.min(devicePixelRatio || 1, CFG.hudMaxDpr);
+    canvas.width  = Math.round(innerWidth * hudDpr);
+    canvas.height = Math.round(innerHeight * hudDpr);
+}
+
+/* ── АУДІО: все синтезується WebAudio, без файлів ── */
+const AU = {
+    ctx: null, master: null, on: true, noise: null, hum: null, drone: null,
+    init(){
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AC();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.6;
+            this.master.connect(this.ctx.destination);
+            const len = this.ctx.sampleRate;
+            const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+            this.noise = buf;
+            this.ctx.resume();
+        } catch (e) { this.ctx = null; }
+    },
+    now(){ return this.ctx.currentTime; },
+    env(g, t0, a, peak, d){
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(peak, t0 + a);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + d);
+    },
+    osc(type, f0, f1, t0, dur, peak){
+        if (!this.ctx) return;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(Math.max(1, f0), t0);
+        if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t0 + dur);
+        this.env(g, t0, 0.005, peak, dur);
+        o.connect(g); g.connect(this.master);
+        o.start(t0); o.stop(t0 + dur + 0.1);
+    },
+    nz(t0, dur, peak, fType, f0, f1, q){
+        if (!this.ctx) return;
+        const s = this.ctx.createBufferSource(); s.buffer = this.noise; s.loop = true;
+        const f = this.ctx.createBiquadFilter(); f.type = fType;
+        f.frequency.setValueAtTime(Math.max(10, f0), t0);
+        if (f1 && f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(10, f1), t0 + dur);
+        f.Q.value = q || 1;
+        const g = this.ctx.createGain();
+        this.env(g, t0, 0.008, peak, dur);
+        s.connect(f); f.connect(g); g.connect(this.master);
+        s.start(t0); s.stop(t0 + dur + 0.1);
+    },
+    boot(){ if (!this.ctx) return; const t = this.now(); [440,660,990].forEach((f,i)=>this.osc('square',f,f,t+i*0.12,0.07,0.05)); this.osc('sine',180,720,t+0.4,0.5,0.05); },
+    lockOn(){ if (!this.ctx) return; const t = this.now(); this.osc('square',880,880,t,0.07,0.08); this.osc('square',1245,1245,t+0.09,0.09,0.08); this.nz(t,0.05,0.03,'highpass',3000,0,1); },
+    lockLost(){ if (!this.ctx) return; this.osc('triangle',520,240,this.now(),0.18,0.045); },
+    ping(){ if (!this.ctx) return; const t = this.now(); this.osc('sine',1175,1175,t,0.05,0.03); this.osc('sine',1175,1175,t+0.13,0.07,0.012); },
+    tick(){ if (!this.ctx) return; this.osc('square',2100,2100,this.now(),0.014,0.018); },
+    shutter(){ if (!this.ctx) return; const t = this.now(); this.nz(t,0.03,0.2,'bandpass',1100,0,1.5); this.nz(t+0.07,0.05,0.14,'bandpass',700,0,1.2); this.osc('square',2300,2300,t+0.005,0.02,0.05); },
+    ewBurst(){ if (!this.ctx) return; const t = this.now(); for (let i=0;i<5;i++) this.nz(t+i*0.09+Math.random()*0.04,0.06,0.05,'highpass',2400,0,1); },
+    clicks(){ /* фірмове клацання Хижака: групи bandpass-шумових імпульсів */
+        if (!this.ctx) return;
+        const n = 4 + (Math.random()*5|0); let t = this.now();
+        for (let i=0;i<n;i++){
+            const f = 1500 + Math.random()*1100;
+            this.nz(t,0.02,0.15,'bandpass',f,0,9);
+            this.nz(t,0.03,0.08,'bandpass',f*0.5,0,7);
+            t += 0.05 + Math.random()*0.08;
+        }
+    },
+    thermal(on){
+        if (!this.ctx) return; const t = this.now();
+        if (on){ this.osc('sawtooth',150,950,t,1.1,0.045); this.nz(t,1.15,0.09,'bandpass',350,2800,2); this.osc('sine',55,55,t,1.3,0.04); }
+        else   { this.osc('sawtooth',900,140,t,0.9,0.04);  this.nz(t,0.95,0.08,'bandpass',2600,320,2); }
+    },
+    humStart(){
+        if (!this.ctx || this.hum) return;
+        const g = this.ctx.createGain(); g.gain.value = 0.012;
+        const o1 = this.ctx.createOscillator(), o2 = this.ctx.createOscillator();
+        o1.frequency.value = 55; o2.frequency.value = 55.7;
+        o1.connect(g); o2.connect(g); g.connect(this.master);
+        o1.start(); o2.start(); this.hum = g;
+    },
+    droneSet(on){
+        if (!this.ctx) return;
+        if (!this.drone){
+            const o = this.ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 48;
+            const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
+            const g = this.ctx.createGain(); g.gain.value = 0;
+            o.connect(f); f.connect(g); g.connect(this.master); o.start();
+            this.drone = g;
+        }
+        this.drone.gain.setTargetAtTime(on ? 0.03 : 0, this.now(), 0.4);
+    },
+    setMute(m){ if (!this.ctx) return; this.on = !m; this.master.gain.setTargetAtTime(m ? 0 : 0.6, this.now(), 0.05); }
+};
+
+/* ── Термінал (суржик-статуси) ── */
+function ts(){
     const n = new Date();
-    return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
+    return String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0') + ':' + String(n.getSeconds()).padStart(2,'0');
 }
 const logQ = []; let logBusy = false;
-async function typeLog(msg, cls='info') {
-    await new Promise(res => { logQ.push({msg,cls,res}); if(!logBusy) drainLog(); });
+function typeLog(msg, cls){
+    return new Promise(res => { logQ.push({ msg, cls: cls || 'info', res }); if (!logBusy) drainLog(); });
 }
-async function drainLog() {
-    if(!logQ.length){logBusy=false;return;} logBusy=true;
-    const {msg,cls,res}=logQ.shift();
-    const e=document.createElement('div'); e.className=`log-entry ${cls}`;
-    const t=document.createElement('span'); t.className='log-ts'; t.textContent=ts();
-    const p=document.createElement('span'); p.className='log-prefix'; p.textContent='›';
-    const x=document.createElement('span');
-    e.append(t,p,x); terminal.insertBefore(e,cursor);
-    while(terminal.querySelectorAll('.log-entry').length>12)
+async function drainLog(){
+    if (!logQ.length){ logBusy = false; return; }
+    logBusy = true;
+    const { msg, cls, res } = logQ.shift();
+    AU.tick();
+    const e = document.createElement('div'); e.className = 'log-entry ' + cls;
+    const t = document.createElement('span'); t.className = 'log-ts'; t.textContent = ts();
+    const p = document.createElement('span'); p.className = 'log-prefix'; p.textContent = '›';
+    const x = document.createElement('span');
+    e.append(t, p, x);
+    terminal.insertBefore(e, cursor);
+    while (terminal.querySelectorAll('.log-entry').length > 12)
         terminal.removeChild(terminal.querySelector('.log-entry'));
-    for(let i=0;i<=msg.length;i++){x.textContent=msg.substring(0,i);await new Promise(r=>setTimeout(r,18));}
+    for (let i = 0; i <= msg.length; i++){
+        x.textContent = msg.substring(0, i);
+        await new Promise(r => setTimeout(r, 16));
+    }
     res(); drainLog();
 }
 
-/* ── Coords drift ── */
-setInterval(()=>{
-    lat+=(Math.random()-0.5)*0.00005; lon+=(Math.random()-0.5)*0.00005;
-    const f=v=>`${Math.floor(Math.abs(v))}°${String(Math.floor((Math.abs(v)%1)*60)).padStart(2,'0')}'${String(((Math.abs(v)%1*60)%1*60)|0).padStart(2,'0')}"`;
-    document.getElementById('coordsL').textContent=`LAT ${f(lat)}${lat>0?'N':'S'}  LON ${f(lon)}${lon>0?'E':'W'}`;
-    const hdg=(360+Math.round(45+Math.sin(Date.now()/10000)*20))%360;
-    document.getElementById('coordsR').textContent=`ALT ${180+Math.round(Math.sin(Date.now()/7000)*5)}m  SPD ${Math.round(12+Math.random()*2)}kts  HDG ${hdg}°`;
-},1500);
+/* ── Фейкова телеметрія ── */
+setInterval(() => {
+    lat += (Math.random() - 0.5) * 0.00005;
+    lon += (Math.random() - 0.5) * 0.00005;
+    const f = v => Math.floor(Math.abs(v)) + '°' + String(Math.floor((Math.abs(v) % 1) * 60)).padStart(2,'0') + "'" + String(((Math.abs(v) % 1 * 60) % 1 * 60) | 0).padStart(2,'0') + '"';
+    coordsL.textContent = 'LAT ' + f(lat) + (lat > 0 ? 'N' : 'S') + '  LON ' + f(lon) + (lon > 0 ? 'E' : 'W');
+    const hdg = (360 + Math.round(45 + Math.sin(Date.now()/10000)*20)) % 360;
+    coordsR.textContent = 'ALT ' + (180 + Math.round(Math.sin(Date.now()/7000)*5)) + 'm  SPD ' + Math.round(12 + Math.random()*2) + 'kts  HDG ' + hdg + '°';
+}, 1500);
 
-/* ══════════════════════════════════════
-   PORTRAIT CAPTURE
-══════════════════════════════════════ */
-function capturePortrait(pred) {
-    if(!video.videoWidth || !video.videoHeight) return;
-    const [bx,by,bw,bh] = pred.bbox;
-    const pad = 0.18;
-    const cx  = Math.max(0, bx - bw*pad);
-    const cy  = Math.max(0, by - bh*pad);
-    const cw  = Math.min(video.videoWidth  - cx, bw*(1+pad*2));
-    const ch  = Math.min(video.videoHeight - cy, bh*(1+pad*2));
+/* ── WebGL: OPTICAL/THERMAL в одному шейдері + wipe-перехід ── */
+const FRAG = `
+precision mediump float;
+varying vec2 vUV;
+uniform sampler2D uTex;
+uniform vec2 uUVScale;
+uniform vec2 uUVOff;
+uniform float uA;
+uniform float uB;
+uniform float uWipe;
+uniform float uTime;
+uniform float uEW;
 
-    const sz = 130;
-    portCanvas.width = sz; portCanvas.height = sz;
-    portCtx.fillStyle = '#000'; portCtx.fillRect(0,0,sz,sz);
-    portCtx.drawImage(video, cx, cy, cw, ch, 0, 0, sz, sz);
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-    const uid = '0x'+Math.random().toString(16).slice(2,8).toUpperCase();
-    document.getElementById('pStampTime').textContent = ts();
-    document.getElementById('pStampId').textContent   = 'ID:'+uid;
-
-    const tier = getThreat(pred.class.toLowerCase());
-    const sec  = String.fromCharCode(65+Math.floor(Math.random()*6))+(Math.floor(Math.random()*9)+1);
-    const spd  = Math.round(12+Math.random()*3);
-    const alt  = 180 + Math.round(Math.sin(Date.now()/7000)*5);
-
-    const rows = [
-        {k:'CLASS',  v: pred.class.toUpperCase(),           red: false},
-        {k:'THREAT', v: tier,                               red: tier==='HIGH'},
-        {k:'CONF',   v: Math.round(pred.score*100)+'%',     red: false},
-        {k:'SECTOR', v: sec,                                red: false},
-        {k:'UID',    v: uid,                                red: false},
-        {k:'LAT',    v: lat.toFixed(5)+'°',                 red: false},
-        {k:'LON',    v: lon.toFixed(5)+'°',                 red: false},
-        {k:'ALT',    v: alt+'m',                            red: false},
-        {k:'SPD',    v: spd+'kts',                          red: false},
-        {k:'STATUS', v: 'LOCKED',                           red: true},
-    ];
-
-    const cmRows = document.getElementById('cmRows');
-    cmRows.innerHTML = '';
-    rows.forEach(r => {
-        const d = document.createElement('div'); d.className='cm-row';
-        d.innerHTML=`<span class="cm-key">${r.k}</span><span class="cm-val${r.red?' red':''}">${r.v}</span>`;
-        cmRows.appendChild(d);
-    });
-
-    /* Flashes */
-    const cf = document.getElementById('capturedFlash');
-    cf.classList.remove('flash'); void cf.offsetWidth; cf.classList.add('flash');
-    flashOv.classList.remove('flash'); void flashOv.offsetWidth; flashOv.classList.add('flash');
-
-    captureCount++;
-    document.getElementById('captureStat').textContent = captureCount;
+vec3 palette(float t){
+    vec3 c = mix(vec3(0.02, 0.0, 0.16), vec3(0.16, 0.0, 0.43), smoothstep(0.0, 0.18, t));
+    c = mix(c, vec3(0.51, 0.0, 0.63), smoothstep(0.18, 0.35, t));
+    c = mix(c, vec3(0.86, 0.08, 0.24), smoothstep(0.35, 0.50, t));
+    c = mix(c, vec3(1.0, 0.35, 0.0),  smoothstep(0.50, 0.65, t));
+    c = mix(c, vec3(1.0, 0.75, 0.0),  smoothstep(0.65, 0.80, t));
+    c = mix(c, vec3(1.0, 1.0, 0.47),  smoothstep(0.80, 0.92, t));
+    c = mix(c, vec3(1.0, 1.0, 1.0),   smoothstep(0.92, 1.0, t));
+    return c;
 }
 
-function showCard()  { captureCard.classList.add('show');    cardVisible=true;  tapHint.classList.remove('show'); }
-function hideCard()  { captureCard.classList.remove('show'); cardVisible=false; }
+void main(){
+    vec2 uv = vUV * uUVScale + uUVOff;
+    float band = step(0.965, hash(vec2(floor(vUV.y * 48.0), floor(uTime * 9.0)))) * uEW;
+    uv.x += (hash(vec2(floor(vUV.y * 48.0), floor(uTime * 31.0))) - 0.5) * 0.09 * band;
+    vec3 c = texture2D(uTex, uv).rgb;
+    float l = dot(c, vec3(0.299, 0.587, 0.114));
 
-/* ── Tap / click handler ── */
-document.getElementById('container').addEventListener('pointerdown', e => {
-    if(startBtn.style.display !== 'none') return;
+    vec3 opt = mix(vec3(l), c, 0.12);
+    opt = (opt - 0.5) * 1.32 + 0.5;
+    opt = clamp(opt, 0.0, 1.0) * vec3(0.42, 0.47, 0.56);
 
-    if(cardVisible) {
-        const r = captureCard.getBoundingClientRect();
-        const inside = e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom;
-        if(!inside) hideCard();
-        return;
+    float lt = pow(clamp(l * 1.15, 0.0, 1.0), 0.8);
+    lt += (hash(vUV * vec2(431.0, 917.0) + uTime * 3.0) - 0.5) * 0.05;
+    vec3 thr = palette(clamp(lt, 0.0, 1.0));
+
+    float edgeN = (hash(vec2(vUV.x * 23.0, floor(uTime * 20.0))) - 0.5) * 0.05;
+    float yb = 1.08 - 1.16 * uWipe;
+    float k = smoothstep(yb - 0.05, yb + 0.05, vUV.y + edgeN);
+    float m = mix(uA, uB, k);
+    vec3 col = mix(opt, thr, m);
+
+    float tr = step(0.001, uWipe) * (1.0 - step(0.999, uWipe));
+    float band2 = exp(-pow((vUV.y - yb) * 26.0, 2.0)) * tr;
+    col += vec3(1.0, 0.85, 0.5) * band2 * 0.55;
+
+    float d = length(vUV - vec2(0.5, 0.5));
+    col *= smoothstep(0.95, 0.35, d) * 0.35 + 0.65;
+    gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+const GL = {
+    gl: null, uni: null, ok: false, cv: null,
+    init(cv){
+        this.cv = cv;
+        const gl = cv.getContext('webgl', { antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true });
+        if (!gl) return false;
+        const mk = (type, src) => {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src); gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; }
+            return s;
+        };
+        const vs = mk(gl.VERTEX_SHADER, 'attribute vec2 aPos; varying vec2 vUV; void main(){ vUV = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }');
+        const fs = mk(gl.FRAGMENT_SHADER, FRAG);
+        if (!vs || !fs) return false;
+        const pr = gl.createProgram();
+        gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(pr)); return false; }
+        gl.useProgram(pr);
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+        const aPos = gl.getAttribLocation(pr, 'aPos');
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        const U = n => gl.getUniformLocation(pr, n);
+        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW') };
+        gl.uniform1i(U('uTex'), 0);
+        this.gl = gl; this.ok = true;
+        cv.addEventListener('webglcontextlost', () => { this.ok = false; }, false);
+        return true;
+    },
+    render(now){
+        if (!this.ok || video.readyState < 2) return;
+        const gl = this.gl, cv = this.cv;
+        const dpr = Math.min(devicePixelRatio || 1, CFG.glMaxDpr);
+        const W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
+        if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); }
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
+        const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+        const va = vw / vh, ca = innerWidth / innerHeight;
+        let sx = 1, sy = 1, ox = 0, oy = 0;
+        if (va > ca){ sx = ca / va; ox = (1 - sx) / 2; }
+        else        { sy = va / ca; oy = (1 - sy) / 2; }
+        gl.uniform2f(this.uni.uUVScale, sx, sy);
+        gl.uniform2f(this.uni.uUVOff, ox, oy);
+        const p = Math.min(1, (now - ST.wipeStart) / CFG.wipeMs);
+        gl.uniform1f(this.uni.uA, ST.wipeFrom);
+        gl.uniform1f(this.uni.uB, ST.wipeTo);
+        gl.uniform1f(this.uni.uWipe, easeWipe(p));
+        gl.uniform1f(this.uni.uTime, now / 1000);
+        gl.uniform1f(this.uni.uEW, ST.ew);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
-
-    if(isLocked && primaryTarget) {
-        capturePortrait(primaryTarget);
-        showCard();
-        typeLog(`PORTRAIT CAPTURED // ${primaryTarget.class.toUpperCase()}`, 'threat');
-    }
-});
-
-/* ── START ── */
-startBtn.onclick = async () => {
-    startBtn.style.opacity='0'; startBtn.style.transition='opacity 0.5s';
-    setTimeout(()=>startBtn.style.display='none', 500);
-
-    document.getElementById('statusPanel').style.display='flex';
-    document.getElementById('botbar').style.display='flex';
-
-    await typeLog('BOOT SEQUENCE INITIATED','info');
-    await typeLog('REQUESTING SENSOR ACCESS..','info');
-    try {
-        const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-        video.srcObject = s;
-        await typeLog('OPTICAL SENSOR OK','info');
-    } catch {
-        await typeLog('SENSOR LINK FAILED','threat'); return;
-    }
-    await typeLog('LOADING NEURAL NETWORK..','info');
-    model = await cocoSsd.load();
-    document.getElementById('modelStat').textContent = 'COCO-SSD';
-    document.getElementById('modeVal').textContent   = 'ACTIVE';
-    await typeLog('MODEL ONLINE -- 80 CLASS DETECTION','info');
-    await typeLog('TAP LOCKED TARGET TO CAPTURE','threat');
-    await typeLog('SCANNING...','info');
-
-    resize(); detectLoop(); draw();
 };
 
-function resize() {
-    canvas.width  = innerWidth  * devicePixelRatio;
-    canvas.height = innerHeight * devicePixelRatio;
+function setVision(v){
+    if (!ST.running) return;
+    if (!GL.ok){ typeLog('WEBGL НЕМА — ТІЛЬКИ ОПТИКА', 'threat'); return; }
+    if (v === ST.vis) return;
+    ST.wipeFrom = ST.vis; ST.wipeTo = v; ST.vis = v;
+    ST.wipeStart = performance.now();
+    AU.thermal(v === 1);
+    AU.droneSet(v === 1);
+    thermalBtn.classList.toggle('on', v === 1);
+    visVal.textContent = v ? 'THERMAL' : 'OPTICAL';
+    typeLog(v ? 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА' : 'НАЗАД НА ОПТИКУ', v ? 'threat' : 'info');
+    if (v === 1) ST.nextClicks = performance.now() + 900;
 }
-window.onresize = resize;
 
-/* ── Detection loop ── */
-async function detectLoop() {
-    if(model && video.readyState >= 3) {
-        try { allPredictions = await model.detect(video); primaryTarget = allPredictions[0]||null; }
-        catch {}
+/* ── Ініт детекторів: GPU з чесним фолбеком на CPU ── */
+async function mkDet(Cls, opts, label, vision){
+    try {
+        return await Cls.createFromOptions(vision, Object.assign({}, opts, { baseOptions: Object.assign({}, opts.baseOptions, { delegate: 'GPU' }) }));
+    } catch (e) {
+        typeLog(label + ': GPU КАПРИЗУЄ, ЇДУ НА CPU', 'threat');
+        return await Cls.createFromOptions(vision, Object.assign({}, opts, { baseOptions: Object.assign({}, opts.baseOptions, { delegate: 'CPU' }) }));
     }
-    if(primaryTarget) {
-        const p = primaryTarget;
-        const [x,y,w,h] = p.bbox;
-        const sX = innerWidth/(video.videoWidth||1), sY = innerHeight/(video.videoHeight||1);
-        targetPos.x=(x+w/2)*sX; targetPos.y=(y+h/2)*sY; targetPos.active=true;
+}
 
-        const dist     = Math.hypot(currentPos.x-targetPos.x, currentPos.y-targetPos.y);
-        const wasLocked = isLocked;
-        isLocked = dist < 130;
-
-        if(isLocked && !wasLocked) {
-            textTick=0; buildInfo(p);
-            document.getElementById('threatBox').classList.add('show');
-            document.getElementById('lockStat').textContent = p.class.toUpperCase();
-            document.getElementById('lockStat').className  = 'sp-val active';
-            glitchActive=12;
-            typeLog(`LOCK -- ${p.class.toUpperCase()} [${getThreat(p.class.toLowerCase())}]`,'threat');
-            if(!cardVisible) tapHint.classList.add('show');
-        }
-        if(!isLocked && wasLocked) {
-            document.getElementById('threatBox').classList.remove('show');
-            document.getElementById('lockStat').textContent = '--';
-            document.getElementById('lockStat').className  = 'sp-val';
-            tapHint.classList.remove('show');
-        }
-
-        document.getElementById('objCount').textContent     = String(allPredictions.length).padStart(2,'0');
-        document.getElementById('confBar').style.width      = Math.round(p.score*100)+'%';
-        document.getElementById('confBar').className        = 'bar-fill'+(isLocked?' danger':'');
+/* ── BOOT ── */
+startBtn.addEventListener('click', async () => {
+    if (ST.booting) return;
+    ST.booting = true;
+    AU.init(); AU.boot(); AU.humStart();
+    startBtn.style.opacity = '0'; startBtn.style.transition = 'opacity 0.5s';
+    setTimeout(() => startBtn.style.display = 'none', 500);
+    statusPanel.style.display = 'flex';
+    botbar.style.display = 'flex';
+    await typeLog('СИСТЕМА ПРОКИДАЄТЬСЯ..', 'info');
+    await typeLog('ПРОШУ КАМЕРУ, НЕ ЖМИСЬ', 'info');
+    try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 960 }, height: { ideal: 540 } }, audio: false });
+        video.srcObject = s;
+        await video.play().catch(() => {});
+        await typeLog('ОПТИКА Є. КАРТИНКА ПРЕТ', 'info');
+    } catch (e) {
+        await typeLog('КАМЕРИ НЕМА. ВСЬО, ПРИЇХАЛИ', 'threat');
+        return;
+    }
+    if (GL.init(glCanvas)){
+        video.style.opacity = '0';
+        await typeLog('WEBGL ШЕЙДЕР: Є', 'info');
     } else {
-        targetPos.active=false; isLocked=false;
-        document.getElementById('objCount').textContent='00';
-        document.getElementById('confBar').style.width='0%';
-        document.getElementById('threatBox').classList.remove('show');
-        document.getElementById('lockStat').textContent='--';
-        document.getElementById('lockStat').className='sp-val';
-        tapHint.classList.remove('show');
+        thermalBtn.disabled = true;
+        await typeLog('WEBGL ЗДОХ — ТЕПЛОВІЗОРА НЕ БУДЕ, СОРЯН', 'threat');
     }
-    setTimeout(detectLoop, 80);
-}
-
-function buildInfo(p) {
-    const tier = getThreat(p.class.toLowerCase());
-    infoLines = [
-        {k:'CLASS', v:p.class.toUpperCase()},
-        {k:'THREAT',v:tier},
-        {k:'CONF',  v:Math.round(p.score*100)+'%'},
-        {k:'ID',    v:'0x'+Math.random().toString(16).slice(2,8).toUpperCase()},
-        {k:'SECTOR',v:`${String.fromCharCode(65+Math.floor(Math.random()*6))}${Math.floor(Math.random()*9+1)}`},
-        {k:'STATUS',v:'LOCKED'},
-    ];
-    const tl = document.getElementById('threatLines'); tl.innerHTML='';
-    infoLines.forEach(l=>{
-        const r=document.createElement('div'); r.className='tbi';
-        r.innerHTML=`<span class="tbi-key">${l.k}</span>  ${l.v}`;
-        tl.appendChild(r);
-    });
-}
-
-/* ════════════════════════════════════════
-   DRAW LOOP
-════════════════════════════════════════ */
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const dpr=devicePixelRatio, W=canvas.width, H=canvas.height;
-
-    const dX=targetPos.active?targetPos.x:innerWidth/2;
-    const dY=targetPos.active?targetPos.y:innerHeight/2;
-    currentPos.x+=(dX-currentPos.x)*0.12;
-    currentPos.y+=(dY-currentPos.y)*0.12;
-
-    lockFactor = isLocked ? Math.min(1,lockFactor+0.08) : Math.max(0,lockFactor-0.04);
-    pulseTime+=0.05; scanAngle+=0.02;
-
-    const tier=primaryTarget?getThreat(primaryTarget.class.toLowerCase()):null;
-    let rr=200,rg=220,rb=255;
-    if(isLocked){
-        if(tier==='HIGH'){rr=255;rg=20;rb=20;}
-        else if(tier==='MED'){rr=255;rg=140;rb=0;}
-        else{rr=255;rg=220;rb=50;}
+    try { ST.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    await typeLog('ТЯГНУ НЕЙРОНКИ З ХМАРИ, ПОТЕРПИ..', 'info');
+    try {
+        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+        objDet = await mkDet(ObjectDetector, { runningMode: 'VIDEO', scoreThreshold: 0.4, maxResults: 10, baseOptions: { modelAssetPath: MODEL_OBJ } }, 'ДЕТЕКТОР', vision);
+        modelStat.textContent = 'MP 1/3';
+        await typeLog("ДЕТЕКТОР ОБ'ЄКТІВ: Є", 'info');
+        poseDet = await mkDet(PoseLandmarker, { runningMode: 'VIDEO', numPoses: 2, baseOptions: { modelAssetPath: MODEL_POSE } }, 'СКЕЛЕТ', vision);
+        modelStat.textContent = 'MP 2/3';
+        await typeLog('СКЕЛЕТ-ТРЕКЕР: Є', 'info');
+        faceDet = await mkDet(FaceDetector, { runningMode: 'VIDEO', baseOptions: { modelAssetPath: MODEL_FACE } }, 'ФЕЙС', vision);
+        modelStat.textContent = 'MP 3/3';
+        await typeLog('ФЕЙС-ДЕТЕКТОР: Є', 'info');
+    } catch (e) {
+        modelStat.textContent = 'FAIL';
+        await typeLog('НЕЙРОНКИ НЕ ПІДЇХАЛИ: ' + (e && e.message ? e.message : e), 'threat');
+        return;
     }
-    const mainColor=`rgba(${rr},${rg},${rb},${0.6+0.4*lockFactor})`;
-
-    /* EW */
-    ewTimer++;
-    if(ewTimer%220===0) ewIntensity=20;
-    if(ewIntensity>0){
-        ewIntensity=Math.max(0,ewIntensity-0.7);
-        document.getElementById('ewAlert').classList.add('show');
-        document.getElementById('ewBar').style.width=(ewIntensity/20*100)+'%';
-        document.getElementById('ewBar').classList.add('danger');
-    } else {
-        document.getElementById('ewAlert').classList.remove('show');
-        document.getElementById('ewBar').style.width='0%';
-        document.getElementById('ewBar').classList.remove('danger');
-    }
-
-    ctx.save();
-    if(glitchActive>0){ctx.translate((Math.random()-0.5)*12*dpr,(Math.random()-0.5)*6*dpr);glitchActive--;}
-    if(ewIntensity>5) ctx.translate((Math.random()-0.5)*8*dpr*(ewIntensity/20),0);
-
-    ctx.strokeStyle=mainColor; ctx.fillStyle=mainColor;
-    ctx.shadowBlur=8+12*lockFactor; ctx.shadowColor=mainColor;
-
-    const cx=currentPos.x*dpr, cy=currentPos.y*dpr;
-
-    /* Secondary detections */
-    if(allPredictions.length>1){
-        ctx.save(); ctx.shadowBlur=3;
-        for(let i=1;i<allPredictions.length;i++){
-            const p=allPredictions[i];
-            const [bx,by,bw,bh]=p.bbox;
-            const sX=innerWidth/(video.videoWidth||1), sY=innerHeight/(video.videoHeight||1);
-            const rx=bx*sX*dpr,ry=by*sY*dpr,rw=bw*sX*dpr,rh=bh*sY*dpr;
-            const t=getThreat(p.class.toLowerCase());
-            ctx.strokeStyle=t==='HIGH'?'rgba(255,80,80,0.4)':t==='MED'?'rgba(255,160,0,0.35)':'rgba(200,200,255,0.25)';
-            ctx.shadowColor=ctx.strokeStyle; ctx.lineWidth=1*dpr;
-            ctx.setLineDash([4*dpr,4*dpr]); ctx.strokeRect(rx,ry,rw,rh); ctx.setLineDash([]);
-            ctx.fillStyle=ctx.strokeStyle; ctx.font=`${9*dpr}px 'Share Tech Mono'`;
-            ctx.fillText(p.class.toUpperCase(),rx+4*dpr,ry-4*dpr);
-        }
-        ctx.restore();
-    }
-
-    /* Primary bbox */
-    if(primaryTarget&&targetPos.active){
-        const p=primaryTarget;
-        const [bx,by,bw,bh]=p.bbox;
-        const sX=innerWidth/(video.videoWidth||1), sY=innerHeight/(video.videoHeight||1);
-        const rx=bx*sX*dpr,ry=by*sY*dpr,rw=bw*sX*dpr,rh=bh*sY*dpr;
-        ctx.save();
-        ctx.strokeStyle=mainColor; ctx.shadowColor=mainColor; ctx.lineWidth=1.5*dpr; ctx.shadowBlur=10*lockFactor;
-        const cL=Math.min(rw,rh)*0.22;
-        ctx.beginPath();
-        ctx.moveTo(rx,ry+cL);ctx.lineTo(rx,ry);ctx.lineTo(rx+cL,ry);
-        ctx.moveTo(rx+rw-cL,ry);ctx.lineTo(rx+rw,ry);ctx.lineTo(rx+rw,ry+cL);
-        ctx.moveTo(rx+rw,ry+rh-cL);ctx.lineTo(rx+rw,ry+rh);ctx.lineTo(rx+rw-cL,ry+rh);
-        ctx.moveTo(rx+cL,ry+rh);ctx.lineTo(rx,ry+rh);ctx.lineTo(rx,ry+rh-cL);
-        ctx.stroke();
-        ctx.fillStyle=`rgba(${rr},${rg},${rb},${0.03+0.04*lockFactor})`;
-        ctx.fillRect(rx,ry,rw,rh);
-        if(lockFactor>0.4){
-            ctx.setLineDash([3*dpr,5*dpr]); ctx.lineWidth=0.5*dpr;
-            ctx.strokeStyle=`rgba(${rr},${rg},${rb},0.3)`;
-            ctx.beginPath();
-            ctx.moveTo(rx-20*dpr,ry);ctx.lineTo(rx-20*dpr,ry+rh);
-            ctx.moveTo(rx,ry-12*dpr);ctx.lineTo(rx+rw,ry-12*dpr);
-            ctx.stroke(); ctx.setLineDash([]);
-            ctx.fillStyle=`rgba(${rr},${rg},${rb},0.5)`; ctx.font=`${8*dpr}px 'Share Tech Mono'`;
-            ctx.fillText(`${Math.round(rh/dpr)}px`,rx-18*dpr,ry+rh/2,16*dpr);
-            ctx.fillText(`${Math.round(rw/dpr)}px`,rx+rw/2-12*dpr,ry-14*dpr);
-        }
-        ctx.restore();
-    }
-
-    drawReticle(cx,cy,dpr,lockFactor,mainColor,rr,rg,rb);
-
-    if(lockFactor>0.05){
-        ctx.globalAlpha=lockFactor;
-        drawDataBlock(cx,cy,dpr,mainColor);
-        ctx.globalAlpha=1;
-    }
-
-    /* EW noise */
-    if(ewIntensity>3){
-        for(let i=0;i<Math.round(ewIntensity*0.8);i++){
-            ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.15})`;
-            ctx.fillRect(Math.random()*W,Math.random()*H,(1+Math.random()*2)*dpr,dpr);
-        }
-        for(let i=0;i<3;i++){
-            ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.08})`;
-            ctx.fillRect(0,Math.random()*H,W,(0.5+Math.random())*dpr);
-        }
-    }
-
-    drawCornerDeco(W,H,dpr);
-    ctx.restore();
+    modeVal.textContent = 'ACTIVE';
+    await typeLog('ВСЬО ПАШЕ. СКАНУЄМО', 'info');
+    await typeLog('ТИЦНИ В ЗАЛОЧЕНУ ЦІЛЬ — БУДЕ ПОРТРЕТ', 'threat');
+    ST.running = true;
+    ST.nextEW = performance.now() + 18000;
+    resize();
+    detectLoop();
     requestAnimationFrame(draw);
+});
+
+/* ── Цикл детекції: obj 8 Гц, pose/face — тільки коли є людина, зі своїм тактом ── */
+function tsFor(o){ o._ts = Math.max((o._ts || 0) + 1, performance.now()); return o._ts; }
+
+async function detectLoop(){
+    if (!ST.running) return;
+    if (document.hidden){ setTimeout(detectLoop, 400); return; }
+    const now = performance.now();
+    try {
+        if (video.readyState >= 2){
+            if (objDet && now - lastObj >= CFG.objMs){
+                lastObj = now;
+                ingestObjects(objDet.detectForVideo(video, tsFor(objDet)), now);
+            }
+            const person = ST.primary && ST.primary.cls === 'person';
+            if (poseDet && person && now - lastPose >= CFG.poseMs){
+                lastPose = now;
+                ingestPose(poseDet.detectForVideo(video, tsFor(poseDet)));
+            }
+            if (faceDet && person && ST.locked && now - lastFace >= CFG.faceMs){
+                lastFace = now;
+                ingestFace(faceDet.detectForVideo(video, tsFor(faceDet)));
+            }
+        }
+    } catch (e) {}
+    setTimeout(detectLoop, 33);
 }
 
-/* ── Reticle ── */
-function drawReticle(cx,cy,dpr,lf,mainColor,rr,rg,rb){
-    ctx.save(); ctx.translate(cx,cy);
-    ctx.strokeStyle=`rgba(${rr},${rg},${rb},0.2)`; ctx.lineWidth=0.5*dpr; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.arc(0,0,110*dpr,0,Math.PI*2); ctx.stroke();
-    if(lf>0.1){
-        const pulse=0.5+0.5*Math.sin(pulseTime*2);
-        ctx.strokeStyle=`rgba(${rr},${rg},${rb},${0.08+0.1*pulse*lf})`; ctx.lineWidth=0.5*dpr;
-        for(const r of[60,80,100]){ctx.beginPath();ctx.arc(0,0,r*dpr,0,Math.PI*2);ctx.stroke();}
+function ingestObjects(res, now){
+    const dets = ((res && res.detections) || []).map(d => ({
+        box: { x: d.boundingBox.originX, y: d.boundingBox.originY, w: d.boundingBox.width, h: d.boundingBox.height },
+        cls: ((d.categories[0] && d.categories[0].categoryName) || '?').toLowerCase(),
+        score: (d.categories[0] && d.categories[0].score) || 0
+    }));
+    ST.tracks = updateTracks(ST.tracks, dets, now, { iouThr: CFG.iouThr, ttl: CFG.trackTTL, smooth: CFG.smooth });
+    const prim = pickPrimary(ST.tracks, ST.primaryId);
+    ST.primary = prim;
+    ST.primaryId = prim ? prim.id : null;
+    ST.items = attachItems(prim, ST.tracks);
+    for (const it of ST.items){
+        if (it.alert){
+            const last = alertLog.get(it.track.cls) || 0;
+            if (now - last > 8000){
+                alertLog.set(it.track.cls, now);
+                typeLog('НЕБЕЗПЕЧНИЙ ПРЕДМЕТ: ' + it.track.cls.toUpperCase(), 'threat');
+            }
+        }
     }
-    if(lf>0.15){
-        ctx.save(); ctx.rotate(pulseTime*1.5);
-        ctx.strokeStyle=`rgba(${rr},${rg},${rb},${0.3+0.3*lf})`; ctx.lineWidth=1.5*dpr;
-        ctx.shadowBlur=6*lf; ctx.shadowColor=mainColor;
-        ctx.setLineDash([18*dpr,50*dpr]);
-        ctx.beginPath(); ctx.arc(0,0,95*dpr,0,Math.PI*2); ctx.stroke(); ctx.restore();
+    if (prim){
+        const T = coverT();
+        const c = v2s(prim.box.x + prim.box.w / 2, prim.box.y + prim.box.h / 2, T);
+        targetPos.x = c.x; targetPos.y = c.y; targetPos.active = true;
+    } else {
+        targetPos.active = false;
     }
-    if(lf>0.3){
-        ctx.save(); ctx.rotate(-pulseTime*0.8);
-        ctx.strokeStyle=`rgba(${rr},${rg},${rb},${0.15+0.15*lf})`; ctx.lineWidth=0.8*dpr;
-        ctx.setLineDash([6*dpr,20*dpr]);
-        ctx.beginPath(); ctx.arc(0,0,75*dpr,0,Math.PI*2); ctx.stroke(); ctx.restore();
+    const wasLocked = ST.locked;
+    ST.locked = !!prim && Math.hypot(currentPos.x - targetPos.x, currentPos.y - targetPos.y) < CFG.lockDist;
+    if (ST.locked && !wasLocked) onLock(prim);
+    else if (!ST.locked && wasLocked) onUnlock();
+    else if (ST.locked && prim && prim.id !== ST.lockedId) onLock(prim);
+    const visN = ST.tracks.filter(t => t.hits >= 2).length;
+    objCount.textContent = String(visN).padStart(2, '0');
+    confBar.style.width = prim ? Math.round(prim.score * 100) + '%' : '0%';
+    confBar.className = 'bar-fill' + (ST.locked ? ' danger' : '');
+    renderThreat();
+}
+
+function ingestPose(res){
+    const lms = (res && res.landmarks) || [];
+    const p = ST.primary;
+    if (!p || p.cls !== 'person'){ ST.anatomy = []; return; }
+    const vw = video.videoWidth, vh = video.videoHeight;
+    let best = null;
+    for (const lm of lms){
+        if (!lm || !lm[0]) continue;
+        const nx = lm[0].x * vw, ny = lm[0].y * vh;
+        if (nx > p.box.x - p.box.w * 0.2 && nx < p.box.x + p.box.w * 1.2 &&
+            ny > p.box.y - p.box.h * 0.2 && ny < p.box.y + p.box.h * 1.2){ best = lm; break; }
+    }
+    ST.anatomy = best ? anatomyNodes(best, vw, vh) : [];
+    ST.poseAt = performance.now();
+}
+
+function ingestFace(res){
+    const dets = (res && res.detections) || [];
+    const p = ST.primary;
+    ST.faceBox = null;
+    if (!p) return;
+    for (const d of dets){
+        const b = d.boundingBox;
+        const cx = b.originX + b.width / 2, cy = b.originY + b.height / 2;
+        if (cx > p.box.x && cx < p.box.x + p.box.w && cy > p.box.y && cy < p.box.y + p.box.h * 0.6){
+            ST.faceBox = { x: b.originX, y: b.originY, w: b.width, h: b.height };
+            ST.faceAt = performance.now();
+            break;
+        }
+    }
+}
+
+function onLock(p){
+    ST.lockedId = p.id;
+    textTick = 0; glitchActive = 12;
+    lockStat.textContent = p.cls.toUpperCase();
+    lockStat.className = 'sp-val active';
+    AU.lockOn();
+    ST.nextPing = performance.now() + 1200;
+    typeLog('ЗАЛОЧИВ — ' + p.cls.toUpperCase() + ' [' + getThreat(p.cls) + ']', 'threat');
+    if (!ST.cardVisible) tapHint.classList.add('show');
+}
+function onUnlock(){
+    ST.lockedId = null;
+    lockStat.textContent = '--';
+    lockStat.className = 'sp-val';
+    tapHint.classList.remove('show');
+    AU.lockLost();
+    renderThreat();
+}
+
+/* видимі частини (анатомія свіжа < 1.2 c) */
+function partSet(){
+    const now = performance.now();
+    const s = new Set();
+    if (now - ST.poseAt < 1200) for (const a of ST.anatomy) s.add(a.key);
+    if (ST.faceBox && now - ST.faceAt < 1200) s.add('HEAD');
+    return s;
+}
+
+/* ── Композитна картка: єдине бачення цілі з частин + предметів ── */
+function renderThreat(){
+    const p = ST.primary;
+    if (!p || !ST.locked){ threatBox.classList.remove('show'); ST.tSig = ''; return; }
+    threatBox.classList.add('show');
+    const tier = getThreat(p.cls);
+    const have = partSet();
+    const sig = [p.id, p.cls, Math.round(p.score * 20), Array.from(have).sort().join(','), ST.items.map(i => i.track.cls + (i.alert ? '!' : '')).join(',')].join('|');
+    if (sig === ST.tSig) return;
+    ST.tSig = sig;
+    const row = (k, v, red) => '<div class="tbi"><span class="tbi-key">' + k + '</span><span class="' + (red ? 'tbi-red' : '') + '">' + v + '</span></div>';
+    let h = row('CLASS', p.cls.toUpperCase())
+          + row('THREAT', tier, tier === 'HIGH')
+          + row('CONF', Math.round(p.score * 100) + '%')
+          + row('ID', p.id);
+    if (p.cls === 'person'){
+        h += '<div class="tb-sub">// components ' + have.size + '/4</div>';
+        for (const k of ['HEAD', 'TORSO', 'HAND·L', 'HAND·R']) h += row(k, have.has(k) ? '●' : '—', false);
+    }
+    if (ST.items.length){
+        h += '<div class="tb-sub">// attached</div>';
+        for (const it of ST.items) h += row(it.track.cls.toUpperCase().slice(0, 10), it.alert ? '⚠' : '●', it.alert);
+    }
+    threatLines.innerHTML = h;
+}
+
+/* ── Портрет: знімається з GL-канви (з поточним режимом бачення), фолбек — сире відео ── */
+function capturePortrait(t){
+    const sz = 130;
+    portCanvas.width = sz; portCanvas.height = sz;
+    portCtx.fillStyle = '#000'; portCtx.fillRect(0, 0, sz, sz);
+    const pad = 0.15;
+    if (GL.ok){
+        const T = coverT();
+        const a = v2s(t.box.x, t.box.y, T);
+        const b = v2s(t.box.x + t.box.w, t.box.y + t.box.h, T);
+        let w = b.x - a.x, h = b.y - a.y;
+        let x = a.x - w * pad, y = a.y - h * pad;
+        w *= 1 + pad * 2; h *= 1 + pad * 2;
+        x = Math.max(0, x); y = Math.max(0, y);
+        w = Math.min(innerWidth - x, w); h = Math.min(innerHeight - y, h);
+        const k = GL.cv.width / innerWidth;
+        if (w > 2 && h > 2) portCtx.drawImage(GL.cv, x * k, y * k, w * k, h * k, 0, 0, sz, sz);
+        portCanvas.classList.remove('rawlook');
+    } else {
+        if (!video.videoWidth) return;
+        let x = t.box.x - t.box.w * pad, y = t.box.y - t.box.h * pad;
+        let w = t.box.w * (1 + pad * 2), h = t.box.h * (1 + pad * 2);
+        x = Math.max(0, x); y = Math.max(0, y);
+        w = Math.min(video.videoWidth - x, w); h = Math.min(video.videoHeight - y, h);
+        portCtx.drawImage(video, x, y, w, h, 0, 0, sz, sz);
+        portCanvas.classList.add('rawlook');
+    }
+    pStampTime.textContent = ts();
+    pStampId.textContent = 'ID:' + t.id;
+    const tier = getThreat(t.cls);
+    const sec = String.fromCharCode(65 + Math.floor(Math.random() * 6)) + (Math.floor(Math.random() * 9) + 1);
+    const have = partSet();
+    const rows = [
+        { k: 'CLASS',  v: t.cls.toUpperCase() },
+        { k: 'THREAT', v: tier, red: tier === 'HIGH' },
+        { k: 'CONF',   v: Math.round(t.score * 100) + '%' }
+    ];
+    if (t.cls === 'person'){
+        rows.push({ k: 'PARTS', v: have.size + '/4' });
+        rows.push({ k: 'ITEMS', v: ST.items.length ? ST.items.map(i => i.track.cls).join(',').toUpperCase().slice(0, 15) : '—', red: ST.items.some(i => i.alert) });
+    }
+    rows.push(
+        { k: 'VIS',    v: ST.vis ? 'THERMAL' : 'OPTICAL' },
+        { k: 'SECTOR', v: sec },
+        { k: 'LAT',    v: lat.toFixed(5) + '°' },
+        { k: 'LON',    v: lon.toFixed(5) + '°' },
+        { k: 'STATUS', v: 'LOCKED', red: true }
+    );
+    cmRows.innerHTML = '';
+    rows.forEach(r => {
+        const d = document.createElement('div'); d.className = 'cm-row';
+        d.innerHTML = '<span class="cm-key">' + r.k + '</span><span class="cm-val' + (r.red ? ' red' : '') + '">' + r.v + '</span>';
+        cmRows.appendChild(d);
+    });
+    capturedFlash.classList.remove('flash'); void capturedFlash.offsetWidth; capturedFlash.classList.add('flash');
+    flashOv.classList.remove('flash'); void flashOv.offsetWidth; flashOv.classList.add('flash');
+    AU.shutter();
+    ST.captures++;
+    captureStat.textContent = ST.captures;
+}
+function showCard(){ captureCard.classList.add('show'); ST.cardVisible = true; tapHint.classList.remove('show'); }
+function hideCard(){ captureCard.classList.remove('show'); ST.cardVisible = false; if (ST.locked) tapHint.classList.add('show'); }
+
+/* ── Дані для тайп-блоку біля ретикла ── */
+function currentInfo(){
+    const p = ST.primary;
+    if (!p) return [];
+    const L = [
+        { k: 'CLASS',  v: p.cls.toUpperCase() },
+        { k: 'THREAT', v: getThreat(p.cls) },
+        { k: 'CONF',   v: Math.round(p.score * 100) + '%' },
+        { k: 'ID',     v: p.id }
+    ];
+    if (p.cls === 'person') L.push({ k: 'PARTS', v: partSet().size + '/4' });
+    if (ST.items.length) L.push({ k: 'ATT', v: ST.items.length + (ST.items.some(i => i.alert) ? ' ⚠' : '') });
+    L.push({ k: 'STATUS', v: 'LOCKED' });
+    return L;
+}
+
+/* ── T-800 колонка асемблера ── */
+const ASM_OPS = ['LDA','STA','JMP','BNE','CMP','LDX','LDY','STX','INX','DEX','BEQ','JSR','RTS','ADC','SBC','AND','ORA','EOR','ASL','LSR','BRK','NOP'];
+let asmLines = [], lastAsm = 0;
+function hx(){ return Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase(); }
+function asmLine(){ return hx() + hx() + ' ' + hx() + ' ' + hx() + '  ' + ASM_OPS[(Math.random() * ASM_OPS.length) | 0] + ' $' + hx() + hx(); }
+function drawAsm(now, dpr){
+    if (innerWidth < 380) return;
+    if (now - lastAsm > 110){ lastAsm = now; asmLines.push(asmLine()); if (asmLines.length > 40) asmLines.shift(); }
+    const yStart = 210, yEnd = innerHeight - 250;
+    const maxN = Math.floor((yEnd - yStart) / 11);
+    if (maxN < 4) return;
+    const n = Math.min(maxN, asmLines.length);
+    ctx.save();
+    ctx.font = (7.5 * dpr) + "px 'Share Tech Mono'";
+    ctx.fillStyle = ST.vis === 1 ? 'rgba(255,220,150,0.16)' : 'rgba(255,255,255,0.12)';
+    ctx.shadowBlur = 0;
+    for (let i = 0; i < n; i++)
+        ctx.fillText(asmLines[asmLines.length - n + i], 10 * dpr, (yStart + i * 11) * dpr);
+    ctx.restore();
+}
+
+/* ── Вторинні цілі ── */
+function drawSecondary(dpr, T){
+    ctx.save(); ctx.shadowBlur = 3;
+    const itemIds = new Set(ST.items.map(i => i.track.id));
+    for (const t of ST.tracks){
+        if (t.id === ST.primaryId || t.hits < 2 || itemIds.has(t.id)) continue;
+        const a = v2s(t.box.x, t.box.y, T), b = v2s(t.box.x + t.box.w, t.box.y + t.box.h, T);
+        const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
+        const tier = getThreat(t.cls);
+        const col = tier === 'HIGH' ? 'rgba(255,80,80,0.4)' : tier === 'MED' ? 'rgba(255,160,0,0.35)' : 'rgba(200,200,255,0.25)';
+        ctx.strokeStyle = col; ctx.shadowColor = col; ctx.lineWidth = 1 * dpr;
+        ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.strokeRect(rx, ry, rw, rh); ctx.setLineDash([]);
+        ctx.fillStyle = col; ctx.font = (9 * dpr) + "px 'Share Tech Mono'";
+        ctx.fillText(t.cls.toUpperCase(), rx + 4 * dpr, ry - 4 * dpr);
+    }
+    ctx.restore();
+}
+
+/* ── Батьківський бокс + ANALYSIS ── */
+function drawPrimaryBox(p, dpr, T, mainColor, rr, rg, rb){
+    const a = v2s(p.box.x, p.box.y, T), b = v2s(p.box.x + p.box.w, p.box.y + p.box.h, T);
+    const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
+    const lf = ST.lockF;
+    ctx.save();
+    ctx.strokeStyle = mainColor; ctx.shadowColor = mainColor; ctx.lineWidth = 1.5 * dpr; ctx.shadowBlur = 10 * lf;
+    const cL = Math.min(rw, rh) * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry + cL); ctx.lineTo(rx, ry); ctx.lineTo(rx + cL, ry);
+    ctx.moveTo(rx + rw - cL, ry); ctx.lineTo(rx + rw, ry); ctx.lineTo(rx + rw, ry + cL);
+    ctx.moveTo(rx + rw, ry + rh - cL); ctx.lineTo(rx + rw, ry + rh); ctx.lineTo(rx + rw - cL, ry + rh);
+    ctx.moveTo(rx + cL, ry + rh); ctx.lineTo(rx, ry + rh); ctx.lineTo(rx, ry + rh - cL);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.03 + 0.04 * lf) + ')';
+    ctx.fillRect(rx, ry, rw, rh);
+    if (lf > 0.4){
+        ctx.setLineDash([3 * dpr, 5 * dpr]); ctx.lineWidth = 0.5 * dpr;
+        ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.3)';
+        ctx.beginPath();
+        ctx.moveTo(rx - 20 * dpr, ry); ctx.lineTo(rx - 20 * dpr, ry + rh);
+        ctx.moveTo(rx, ry - 12 * dpr); ctx.lineTo(rx + rw, ry - 12 * dpr);
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.5)';
+        ctx.font = (8 * dpr) + "px 'Share Tech Mono'";
+        ctx.fillText(Math.round(rh / dpr) + 'px', rx - 18 * dpr, ry + rh / 2);
+        ctx.fillText(Math.round(rw / dpr) + 'px', rx + rw / 2 - 12 * dpr, ry - 14 * dpr);
+    }
+    if (ST.locked){
+        const blink = 0.4 + 0.3 * Math.sin(pulseTime * 3);
+        ctx.fillStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + blink + ')';
+        ctx.font = '700 ' + (10 * dpr) + 'px Rajdhani';
+        ctx.fillText('A N A L Y S I S', rx, ry - 26 * dpr);
+    }
+    ctx.restore();
+}
+
+/* ── Дочірні фокуси: анатомія + предмети, лінії зв'язку до батьківського центру ── */
+function drawChildren(dpr, T, rr, rg, rb){
+    const cx = currentPos.x * dpr, cy = currentPos.y * dpr;
+    const now = performance.now();
+    ctx.save();
+    ctx.font = (8 * dpr) + "px 'Share Tech Mono'";
+    const haveFace = ST.faceBox && now - ST.faceAt < 1200;
+    if (now - ST.poseAt < 1200){
+        for (const n of ST.anatomy){
+            if (n.key === 'HEAD' && haveFace) continue;
+            const s = v2s(n.pt.x, n.pt.y, T);
+            const px = s.x * dpr, py = s.y * dpr;
+            const col = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.45)';
+            ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 4;
+            ctx.lineWidth = 0.8 * dpr;
+            ctx.setLineDash([2 * dpr, 6 * dpr]);
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+            ctx.setLineDash([]);
+            const r = 6 * dpr;
+            ctx.lineWidth = 1.2 * dpr;
+            ctx.beginPath();
+            ctx.moveTo(px, py - r); ctx.lineTo(px + r, py); ctx.lineTo(px, py + r); ctx.lineTo(px - r, py); ctx.closePath();
+            ctx.stroke();
+            ctx.fillStyle = col;
+            ctx.beginPath(); ctx.arc(px, py, 1.5 * dpr, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.6)';
+            ctx.fillText(n.key, px + 9 * dpr, py - 6 * dpr);
+        }
+    }
+    if (haveFace){
+        const a = v2s(ST.faceBox.x, ST.faceBox.y, T);
+        const b = v2s(ST.faceBox.x + ST.faceBox.w, ST.faceBox.y + ST.faceBox.h, T);
+        const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
+        const col = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.7)';
+        ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 5;
+        ctx.lineWidth = 1.2 * dpr;
+        const cL = Math.min(rw, rh) * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(rx, ry + cL); ctx.lineTo(rx, ry); ctx.lineTo(rx + cL, ry);
+        ctx.moveTo(rx + rw - cL, ry); ctx.lineTo(rx + rw, ry); ctx.lineTo(rx + rw, ry + cL);
+        ctx.moveTo(rx + rw, ry + rh - cL); ctx.lineTo(rx + rw, ry + rh); ctx.lineTo(rx + rw - cL, ry + rh);
+        ctx.moveTo(rx + cL, ry + rh); ctx.lineTo(rx, ry + rh); ctx.lineTo(rx, ry + rh - cL);
+        ctx.stroke();
+        ctx.setLineDash([2 * dpr, 6 * dpr]);
+        ctx.lineWidth = 0.8 * dpr;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(rx + rw / 2, ry + rh); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = col;
+        ctx.fillText('HEAD', rx, ry - 5 * dpr);
+    }
+    const pulse = 0.5 + 0.4 * Math.sin(pulseTime * 6);
+    for (const it of ST.items){
+        const tb = it.track.box;
+        const a = v2s(tb.x, tb.y, T), b = v2s(tb.x + tb.w, tb.y + tb.h, T);
+        const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
+        const col = it.alert ? 'rgba(255,32,32,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(120,200,255,0.55)';
+        ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = it.alert ? 8 : 3;
+        ctx.lineWidth = 1 * dpr;
+        ctx.setLineDash([3 * dpr, 3 * dpr]);
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(rx + rw / 2, ry + rh / 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = col;
+        ctx.fillText((it.alert ? '⚠ ' : '') + it.track.cls.toUpperCase(), rx, ry - 4 * dpr);
+    }
+    ctx.restore();
+}
+
+/* ── Ретикл ── */
+function drawReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.2)'; ctx.lineWidth = 0.5 * dpr; ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(0, 0, 110 * dpr, 0, Math.PI * 2); ctx.stroke();
+    if (lf > 0.1){
+        const pulse = 0.5 + 0.5 * Math.sin(pulseTime * 2);
+        ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.08 + 0.1 * pulse * lf) + ')'; ctx.lineWidth = 0.5 * dpr;
+        for (const r of [60, 80, 100]){ ctx.beginPath(); ctx.arc(0, 0, r * dpr, 0, Math.PI * 2); ctx.stroke(); }
+    }
+    if (lf > 0.15){
+        ctx.save(); ctx.rotate(pulseTime * 1.5);
+        ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.3 + 0.3 * lf) + ')'; ctx.lineWidth = 1.5 * dpr;
+        ctx.shadowBlur = 6 * lf; ctx.shadowColor = mainColor;
+        ctx.setLineDash([18 * dpr, 50 * dpr]);
+        ctx.beginPath(); ctx.arc(0, 0, 95 * dpr, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+    if (lf > 0.3){
+        ctx.save(); ctx.rotate(-pulseTime * 0.8);
+        ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.15 + 0.15 * lf) + ')'; ctx.lineWidth = 0.8 * dpr;
+        ctx.setLineDash([6 * dpr, 20 * dpr]);
+        ctx.beginPath(); ctx.arc(0, 0, 75 * dpr, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     }
     ctx.setLineDash([]);
-    const bS=(28-8*lf)*dpr, bD=(8+14*lf)*dpr;
-    ctx.strokeStyle=mainColor; ctx.lineWidth=2.5*dpr; ctx.shadowBlur=10*lf; ctx.shadowColor=mainColor;
-    for(let i=0;i<4;i++){
-        ctx.save(); ctx.rotate(i*Math.PI/2);
+    const bS = (28 - 8 * lf) * dpr, bD = (8 + 14 * lf) * dpr;
+    ctx.strokeStyle = mainColor; ctx.lineWidth = 2.5 * dpr; ctx.shadowBlur = 10 * lf; ctx.shadowColor = mainColor;
+    for (let i = 0; i < 4; i++){
+        ctx.save(); ctx.rotate(i * Math.PI / 2);
         ctx.beginPath();
-        ctx.moveTo(bS,-bS+bD); ctx.lineTo(bS,-bS); ctx.lineTo(bS-bD,-bS);
+        ctx.moveTo(bS, -bS + bD); ctx.lineTo(bS, -bS); ctx.lineTo(bS - bD, -bS);
         ctx.stroke(); ctx.restore();
     }
-    ctx.lineWidth=1.5*dpr; ctx.shadowBlur=6;
-    const c=7*dpr, gap=4*dpr;
+    ctx.lineWidth = 1.5 * dpr; ctx.shadowBlur = 6;
+    const c = 7 * dpr, gap = 4 * dpr;
     ctx.beginPath();
-    ctx.moveTo(-c,0);ctx.lineTo(-gap,0); ctx.moveTo(gap,0);ctx.lineTo(c,0);
-    ctx.moveTo(0,-c);ctx.lineTo(0,-gap); ctx.moveTo(0,gap);ctx.lineTo(0,c);
+    ctx.moveTo(-c, 0); ctx.lineTo(-gap, 0); ctx.moveTo(gap, 0); ctx.lineTo(c, 0);
+    ctx.moveTo(0, -c); ctx.lineTo(0, -gap); ctx.moveTo(0, gap); ctx.lineTo(0, c);
     ctx.stroke();
-    ctx.shadowBlur=12*lf; ctx.beginPath(); ctx.arc(0,0,2.5*dpr,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=`rgba(${rr},${rg},${rb},0.5)`; ctx.lineWidth=1*dpr; ctx.shadowBlur=0;
-    for(let a=0;a<360;a+=15){
-        const rad=a*Math.PI/180;
-        const inn=a%90===0?115*dpr:a%45===0?112*dpr:110.5*dpr;
+    ctx.fillStyle = mainColor;
+    ctx.shadowBlur = 12 * lf; ctx.beginPath(); ctx.arc(0, 0, 2.5 * dpr, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',0.5)'; ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0;
+    for (let a = 0; a < 360; a += 15){
+        const rad = a * Math.PI / 180;
+        const inn = a % 90 === 0 ? 115 * dpr : a % 45 === 0 ? 112 * dpr : 110.5 * dpr;
         ctx.beginPath();
-        ctx.moveTo(Math.cos(rad)*inn,Math.sin(rad)*inn);
-        ctx.lineTo(Math.cos(rad)*118*dpr,Math.sin(rad)*118*dpr); ctx.stroke();
+        ctx.moveTo(Math.cos(rad) * inn, Math.sin(rad) * inn);
+        ctx.lineTo(Math.cos(rad) * 118 * dpr, Math.sin(rad) * 118 * dpr); ctx.stroke();
     }
-    if(lf>0.5){
-        const burst=(lf-0.5)*2;
-        ctx.strokeStyle=`rgba(${rr},${rg},${rb},${0.15*burst})`; ctx.lineWidth=0.5*dpr;
-        for(let a=0;a<360;a+=30){
-            const rad=a*Math.PI/180;
+    if (lf > 0.5){
+        const burst = (lf - 0.5) * 2;
+        ctx.strokeStyle = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.15 * burst) + ')'; ctx.lineWidth = 0.5 * dpr;
+        for (let a = 0; a < 360; a += 30){
+            const rad = a * Math.PI / 180;
             ctx.beginPath();
-            ctx.moveTo(Math.cos(rad)*120*dpr,Math.sin(rad)*120*dpr);
-            ctx.lineTo(Math.cos(rad)*(120+30*burst)*dpr,Math.sin(rad)*(120+30*burst)*dpr);
+            ctx.moveTo(Math.cos(rad) * 120 * dpr, Math.sin(rad) * 120 * dpr);
+            ctx.lineTo(Math.cos(rad) * (120 + 30 * burst) * dpr, Math.sin(rad) * (120 + 30 * burst) * dpr);
             ctx.stroke();
         }
     }
-    if(lf<0.8){
+    if (lf < 0.8){
         ctx.save(); ctx.rotate(scanAngle);
-        const sg=ctx.createLinearGradient(0,-100*dpr,0,0);
-        sg.addColorStop(0,`rgba(${rr},${rg},${rb},0.0)`);
-        sg.addColorStop(1,`rgba(${rr},${rg},${rb},${0.08*(1-lf)})`);
-        ctx.fillStyle=sg;
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,108*dpr,-0.5,0.5); ctx.closePath();
+        const sg = ctx.createLinearGradient(0, -100 * dpr, 0, 0);
+        sg.addColorStop(0, 'rgba(' + rr + ',' + rg + ',' + rb + ',0.0)');
+        sg.addColorStop(1, 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.08 * (1 - lf)) + ')');
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 108 * dpr, -0.5, 0.5); ctx.closePath();
         ctx.fill(); ctx.restore();
     }
     ctx.restore();
 }
 
-/* ── Data block ── */
-function drawDataBlock(cx,cy,dpr,mainColor){
-    textTick+=0.6;
-    ctx.font=`${11*dpr}px 'Share Tech Mono'`; ctx.shadowBlur=4; ctx.shadowColor=mainColor;
-    infoLines.forEach((l,i)=>{
-        const chars=Math.floor(textTick-i*4); if(chars<=0) return;
-        let line=(l.k+': '+l.v).substring(0,chars);
-        if(ewIntensity>8&&Math.random()>0.6)
-            line=line.replace(/[A-Z0-9]/g,c=>Math.random()>0.6?String.fromCharCode(33+Math.random()*20):c);
-        ctx.fillText('› '+line, cx+120*dpr, cy-30*dpr+i*(11*dpr)*1.6);
+/* ── Тайп-блок біля ретикла ── */
+function drawDataBlock(cx, cy, dpr, mainColor){
+    const lines = currentInfo();
+    ctx.font = (11 * dpr) + "px 'Share Tech Mono'";
+    ctx.shadowBlur = 4; ctx.shadowColor = mainColor;
+    ctx.fillStyle = mainColor;
+    const bx = currentPos.x > innerWidth * 0.55 ? cx - 250 * dpr : cx + 120 * dpr;
+    lines.forEach((l, i) => {
+        const chars = Math.floor(textTick - i * 4);
+        if (chars <= 0) return;
+        let line = (l.k + ': ' + l.v).substring(0, chars);
+        if (ST.ew > 0.4 && Math.random() > 0.6)
+            line = line.replace(/[A-Z0-9]/g, ch => Math.random() > 0.6 ? String.fromCharCode(33 + Math.random() * 20) : ch);
+        ctx.fillText('› ' + line, bx, cy - 30 * dpr + i * (11 * dpr) * 1.6);
     });
-    if(Math.random()>0.85){ctx.globalAlpha=0.3;ctx.fillRect(cx+115*dpr,cy+40*dpr,Math.random()*50*dpr,1.5*dpr);ctx.globalAlpha=1;}
+    if (Math.random() > 0.85){
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(bx - 5 * dpr, cy + 42 * dpr, Math.random() * 50 * dpr, 1.5 * dpr);
+        ctx.globalAlpha = 1;
+    }
 }
 
-/* ── Corner decorations ── */
-function drawCornerDeco(W,H,dpr){
-    const s=30*dpr;
-    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1*dpr; ctx.shadowBlur=0; ctx.setLineDash([]);
-    [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]].forEach(([x,y,sx,sy])=>{
-        ctx.beginPath(); ctx.moveTo(x+sx*s,y); ctx.lineTo(x,y); ctx.lineTo(x,y+sy*s); ctx.stroke();
+function drawEwNoise(W, H, dpr){
+    const k = ST.ew;
+    for (let i = 0; i < Math.round(k * 16); i++){
+        ctx.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.15) + ')';
+        ctx.fillRect(Math.random() * W, Math.random() * H, (1 + Math.random() * 2) * dpr, dpr);
+    }
+    for (let i = 0; i < 3; i++){
+        ctx.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.08 * k) + ')';
+        ctx.fillRect(0, Math.random() * H, W, (0.5 + Math.random()) * dpr);
+    }
+}
+
+function drawCornerDeco(W, H, dpr){
+    const s = 30 * dpr;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0; ctx.setLineDash([]);
+    [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]].forEach(([x,y,sx,sy]) => {
+        ctx.beginPath(); ctx.moveTo(x + sx * s, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * s); ctx.stroke();
     });
-    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=0.5*dpr; ctx.setLineDash([5*dpr,15*dpr]);
-    ctx.beginPath(); ctx.moveTo(0,H/2);ctx.lineTo(W,H/2); ctx.moveTo(W/2,0);ctx.lineTo(W/2,H); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5 * dpr; ctx.setLineDash([5 * dpr, 15 * dpr]);
+    ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
     ctx.setLineDash([]);
 }
-</script>
 
+/* ── Головний цикл малювання ── */
+function draw(now){
+    requestAnimationFrame(draw);
+    if (document.hidden) return;
+    const dt = Math.min(100, now - lastFrame); lastFrame = now;
+    if (now - lastGl >= 30){ GL.render(now); lastGl = now; }
+    const dpr = hudDpr, W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    pulseTime += dt * 0.003; scanAngle += dt * 0.0012;
+
+    if (now > ST.nextEW){
+        ST.ew = 1; ST.nextEW = now + 22000 + Math.random() * 26000;
+        AU.ewBurst();
+        typeLog('РЕБ ГЛУШИТЬ ЕФІР, ТРИМАЙСЬ', 'threat');
+    }
+    if (ST.ew > 0){
+        ST.ew = Math.max(0, ST.ew - dt / 3200);
+        ewAlert.classList.add('show');
+        ewBar.style.width = (ST.ew * 100) + '%';
+        ewBar.classList.add('danger');
+    } else {
+        ewAlert.classList.remove('show');
+        ewBar.style.width = '0%';
+        ewBar.classList.remove('danger');
+    }
+
+    const dX = targetPos.active ? targetPos.x : innerWidth / 2;
+    const dY = targetPos.active ? targetPos.y : innerHeight / 2;
+    const kk = Math.min(1, dt * 0.0075);
+    currentPos.x += (dX - currentPos.x) * kk;
+    currentPos.y += (dY - currentPos.y) * kk;
+    ST.lockF = ST.locked ? Math.min(1, ST.lockF + dt * 0.005) : Math.max(0, ST.lockF - dt * 0.0025);
+
+    const p = ST.primary, tier = p ? getThreat(p.cls) : null;
+    let rr, rg, rb;
+    if (ST.locked && tier === 'HIGH'){ rr = 255; rg = 20; rb = 20; }
+    else if (ST.locked && tier === 'MED'){ rr = 255; rg = 140; rb = 0; }
+    else if (ST.locked){ rr = 255; rg = 220; rb = 50; }
+    else if (ST.vis === 1){ rr = 255; rg = 240; rb = 205; }
+    else { rr = 200; rg = 220; rb = 255; }
+    const mainColor = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.6 + 0.4 * ST.lockF) + ')';
+    const T = coverT();
+
+    ctx.save();
+    if (glitchActive > 0){ ctx.translate((Math.random() - 0.5) * 12 * dpr, (Math.random() - 0.5) * 6 * dpr); glitchActive--; }
+    if (ST.ew > 0.25) ctx.translate((Math.random() - 0.5) * 8 * dpr * ST.ew, 0);
+    ctx.strokeStyle = mainColor; ctx.fillStyle = mainColor;
+
+    drawAsm(now, dpr);
+    drawSecondary(dpr, T);
+    if (p && targetPos.active) drawPrimaryBox(p, dpr, T, mainColor, rr, rg, rb);
+    if (ST.locked) drawChildren(dpr, T, rr, rg, rb);
+    drawReticle(currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
+    if (ST.lockF > 0.05){
+        ctx.globalAlpha = ST.lockF;
+        textTick += dt * 0.04;
+        drawDataBlock(currentPos.x * dpr, currentPos.y * dpr, dpr, mainColor);
+        ctx.globalAlpha = 1;
+    }
+    if (ST.ew > 0.15) drawEwNoise(W, H, dpr);
+    drawCornerDeco(W, H, dpr);
+    ctx.restore();
+
+    if (ST.locked && now > ST.nextPing){ AU.ping(); ST.nextPing = now + 2300; }
+    if (ST.vis === 1 && now > ST.nextClicks){ AU.clicks(); ST.nextClicks = now + 3800 + Math.random() * 4600; }
+}
+
+/* ── Керування ── */
+container.addEventListener('pointerdown', e => {
+    if (!ST.running) return;
+    if (e.target.closest && e.target.closest('button')) return;
+    if (ST.cardVisible){
+        const r = captureCard.getBoundingClientRect();
+        const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+        if (!inside) hideCard();
+        return;
+    }
+    if (ST.locked && ST.primary){
+        capturePortrait(ST.primary);
+        showCard();
+        typeLog('ПОРТРЕТ Є // ' + ST.primary.cls.toUpperCase(), 'threat');
+    }
+});
+botbar.addEventListener('pointerdown', e => e.stopPropagation());
+thermalBtn.addEventListener('click', () => setVision(ST.vis ? 0 : 1));
+muteBtn.addEventListener('click', () => {
+    const mute = AU.on;
+    AU.setMute(mute);
+    muteBtn.classList.toggle('off', mute);
+});
+window.addEventListener('keydown', e => {
+    if (!ST.running) return;
+    const k = e.key.toLowerCase();
+    if (k === 't' || k === 'е') setVision(ST.vis ? 0 : 1);
+    if (k === 'm' || k === 'ь') muteBtn.click();
+});
+document.addEventListener('visibilitychange', async () => {
+    if (AU.ctx){ if (document.hidden) AU.ctx.suspend(); else if (AU.on) AU.ctx.resume(); }
+    if (!document.hidden && ST.running){
+        try { ST.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    }
+});
+window.addEventListener('resize', resize);
+resize();
+</script>
 </body>
 </html>
