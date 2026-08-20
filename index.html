@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- myFIX v2 // OPTICAL + PREDATOR THERMAL // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
+<!-- myFIX v2 // OPTICAL + PREDATOR THERMAL + MONO-90s // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
@@ -246,6 +246,41 @@ video {
 #flashOverlay.flash { animation: scrFlash 0.25s ease forwards; }
 @keyframes scrFlash { 0%{background:rgba(255,255,255,0.2)} 100%{background:rgba(255,255,255,0)} }
 
+/* MONO: світлий LCD 90-х */
+body.mono { --red: #14110b; background: #eceae2; }
+body.mono .sp-key { color: rgba(38,34,24,0.5); }
+body.mono .sp-val { color: rgba(38,34,24,0.85); }
+body.mono .sp-val.active { text-shadow: none; }
+body.mono .bar-wrap { background: rgba(38,34,24,0.15); }
+body.mono .bar-fill { background: rgba(38,34,24,0.7); }
+body.mono .bar-fill.danger { box-shadow: none; }
+body.mono .log-entry, body.mono .log-entry.info { color: rgba(38,34,24,0.75); }
+body.mono .log-ts { color: rgba(38,34,24,0.35); }
+body.mono .log-prefix { color: rgba(38,34,24,0.4); }
+body.mono #cursor { background: rgba(38,34,24,0.7); }
+body.mono .coords { color: rgba(38,34,24,0.55); }
+body.mono .hudBtn { border-color: rgba(38,34,24,0.4); color: rgba(38,34,24,0.85); background: rgba(236,234,226,0.6); }
+body.mono .hudBtn.on { text-shadow: none; box-shadow: none; }
+body.mono #botbar { background: linear-gradient(to top, rgba(236,234,226,0.85), transparent); border-top-color: rgba(38,34,24,0.2); }
+body.mono #scanlines { background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(38,34,24,0.07) 3px, rgba(38,34,24,0.07) 4px); }
+body.mono #vignette { opacity: 0.3; }
+body.mono #tapHint { color: rgba(38,34,24,0.6); }
+body.mono .tbi { color: rgba(38,34,24,0.8); }
+body.mono .tbi-key { color: rgba(38,34,24,0.4); }
+body.mono .tbi-red { text-shadow: none; }
+body.mono .tb-sub { color: rgba(38,34,24,0.45); border-top-color: rgba(38,34,24,0.15); }
+body.mono .tb-header { border-bottom-color: rgba(38,34,24,0.3); }
+body.mono #captureCard { filter: drop-shadow(0 0 6px rgba(38,34,24,0.3)); }
+body.mono #portraitWrap { border-color: rgba(38,34,24,0.55); }
+body.mono #pScanlines { background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(38,34,24,0.1) 2px, rgba(38,34,24,0.1) 3px); }
+body.mono #pCross::before { border-color: rgba(38,34,24,0.5); }
+body.mono #pStamp { color: rgba(38,34,24,0.8); }
+body.mono #captureMeta { background: rgba(236,234,226,0.92); border-color: rgba(38,34,24,0.35); }
+body.mono .cm-header { border-bottom-color: rgba(38,34,24,0.3); }
+body.mono .cm-key { color: rgba(38,34,24,0.45); }
+body.mono .cm-val { color: rgba(38,34,24,0.85); }
+body.mono .cm-val.red { text-shadow: none; }
+
 @media (max-width: 480px) {
     #coordsR { display: none; }
     #statusPanel { width: 160px; }
@@ -338,7 +373,7 @@ video {
             <span class="coords" id="coordsR">ALT --m  SPD --kts  HDG --°</span>
         </div>
         <div id="botRight">
-            <button class="hudBtn" id="thermalBtn">THR</button>
+            <button class="hudBtn" id="thermalBtn">OPT</button>
             <button class="hudBtn" id="muteBtn">SND</button>
         </div>
     </div>
@@ -662,6 +697,17 @@ const AU = {
         if (!this.ctx) return; const t = this.now();
         [620, 830, 1080].forEach((f, i) => this.osc('square', f, f, t + i * 0.09, 0.055, 0.05));
     },
+    retroSwap(){
+        /* бут старої приставки: квадратне арпеджіо + стрічковий тік */
+        if (!this.ctx) return; const t = this.now();
+        [523, 659, 784, 1046].forEach((f, i) => this.osc('square', f, f, t + i * 0.07, 0.06, 0.06));
+        this.nz(t + 0.3, 0.08, 0.04, 'highpass', 3000, 0, 1);
+    },
+    coin(){
+        if (!this.ctx) return; const t = this.now();
+        this.osc('square', 988, 988, t, 0.06, 0.05);
+        this.osc('square', 1319, 1319, t + 0.06, 0.16, 0.05);
+    },
     humStart(){
         if (!this.ctx || this.hum) return;
         const g = this.ctx.createGain(); g.gain.value = 0.012;
@@ -735,6 +781,8 @@ uniform float uB;
 uniform float uWipe;
 uniform float uTime;
 uniform float uEW;
+uniform vec2 uRes;
+uniform float uPix;
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
@@ -749,10 +797,19 @@ vec3 palette(float t){
     return c;
 }
 
+float Bayer2(vec2 a){ a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
+float Bayer4(vec2 a){ return Bayer2(0.5 * a) * 0.25 + Bayer2(a); }
+
+vec3 modePick(float m, vec3 o, vec3 t, vec3 mo){
+    vec3 c = mix(o, t, clamp(m, 0.0, 1.0));
+    return mix(c, mo, clamp(m - 1.0, 0.0, 1.0));
+}
+
 void main(){
-    vec2 uv = vUV * uUVScale + uUVOff;
     float band = step(0.965, hash(vec2(floor(vUV.y * 48.0), floor(uTime * 9.0)))) * uEW;
-    uv.x += (hash(vec2(floor(vUV.y * 48.0), floor(uTime * 31.0))) - 0.5) * 0.09 * band;
+    float off = (hash(vec2(floor(vUV.y * 48.0), floor(uTime * 31.0))) - 0.5) * 0.09 * band;
+    vec2 uv = vUV * uUVScale + uUVOff;
+    uv.x += off;
     vec3 c = texture2D(uTex, uv).rgb;
     float l = dot(c, vec3(0.299, 0.587, 0.114));
 
@@ -764,18 +821,34 @@ void main(){
     lt += (hash(vUV * vec2(431.0, 917.0) + uTime * 3.0) - 0.5) * 0.05;
     vec3 thr = palette(clamp(lt, 0.0, 1.0));
 
+    /* MONO: піксельна сітка + дизеринг Байєра, чорнило на світлому тлі */
+    vec2 cell = floor(gl_FragCoord.xy / uPix);
+    vec2 uvq = (cell * uPix + uPix * 0.5) / uRes;
+    vec2 suv = uvq * uUVScale + uUVOff;
+    suv.x += off;
+    float lq = dot(texture2D(uTex, suv).rgb, vec3(0.299, 0.587, 0.114));
+    lq = clamp((lq - 0.5) * 1.3 + 0.58, 0.0, 1.0);
+    vec2 fpix = fract(gl_FragCoord.xy / uPix);
+    float dotm = step(max(abs(fpix.x - 0.5), abs(fpix.y - 0.5)), 0.38);
+    float ink = step(lq, Bayer4(cell)) * dotm;
+    vec3 mono = mix(vec3(0.93, 0.92, 0.88), vec3(0.22, 0.20, 0.14), ink);
+
     float edgeN = (hash(vec2(vUV.y * 23.0, floor(uTime * 20.0))) - 0.5) * 0.05;
     float xb = 1.16 * uWipe - 0.08;
     float k = 1.0 - smoothstep(xb - 0.05, xb + 0.05, vUV.x + edgeN);
-    float m = mix(uA, uB, k);
-    vec3 col = mix(opt, thr, m);
+    vec3 colA = modePick(uA, opt, thr, mono);
+    vec3 colB = modePick(uB, opt, thr, mono);
+    vec3 col = mix(colA, colB, k);
 
     float tr = step(0.001, uWipe) * (1.0 - step(0.999, uWipe));
     float band2 = exp(-pow((vUV.x - xb) * 26.0, 2.0)) * tr;
-    col += vec3(1.0, 0.85, 0.5) * band2 * 0.55;
+    vec3 edgeCol = mix(vec3(1.0, 0.85, 0.5), vec3(-0.6, -0.6, -0.6), step(1.5, max(uA, uB)));
+    col += edgeCol * band2 * 0.55;
 
     float d = length(vUV - vec2(0.5, 0.5));
-    col *= smoothstep(0.95, 0.35, d) * 0.35 + 0.65;
+    float vig = smoothstep(0.95, 0.35, d) * 0.35 + 0.65;
+    float monoW = clamp(mix(uA, uB, k) - 1.0, 0.0, 1.0);
+    col *= mix(vig, 1.0, monoW * 0.7);
     gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -813,7 +886,7 @@ const GL = {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         const U = n => gl.getUniformLocation(pr, n);
-        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW') };
+        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW'), uRes: U('uRes'), uPix: U('uPix') };
         gl.uniform1i(U('uTex'), 0);
         this.gl = gl; this.ok = true;
         cv.addEventListener('webglcontextlost', () => { this.ok = false; }, false);
@@ -839,6 +912,8 @@ const GL = {
         gl.uniform1f(this.uni.uWipe, easeWipe(p));
         gl.uniform1f(this.uni.uTime, now / 1000);
         gl.uniform1f(this.uni.uEW, ST.ew);
+        gl.uniform2f(this.uni.uRes, W, H);
+        gl.uniform1f(this.uni.uPix, Math.max(4, Math.round(3 * dpr)));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 };
@@ -849,11 +924,15 @@ function setVision(v){
     if (v === ST.vis) return;
     ST.wipeFrom = ST.vis; ST.wipeTo = v; ST.vis = v;
     ST.wipeStart = performance.now();
-    AU.visionSwap(v === 1);
+    if (v === 1) AU.visionSwap(true);
+    else if (v === 2) AU.retroSwap();
+    else AU.visionSwap(false);
     AU.droneSet(v === 1);
-    thermalBtn.classList.toggle('on', v === 1);
-    visVal.textContent = v ? 'THERMAL' : 'OPTICAL';
-    typeLog(v ? 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА' : 'НАЗАД НА ОПТИКУ', v ? 'threat' : 'info');
+    document.body.classList.toggle('mono', v === 2);
+    thermalBtn.classList.toggle('on', v !== 0);
+    thermalBtn.textContent = ['OPT', 'THR', 'MON'][v];
+    visVal.textContent = ['OPTICAL', 'THERMAL', 'MONO'][v];
+    typeLog(v === 1 ? 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА' : v === 2 ? 'МОНОХРОМ. ПРИВІТ З 90-Х' : 'НАЗАД НА ОПТИКУ', v ? 'threat' : 'info');
     if (v === 1) ST.nextClicks = performance.now() + 900;
 }
 
@@ -1117,7 +1196,7 @@ function capturePortrait(t){
         rows.push({ k: 'ITEMS', v: ST.items.length ? ST.items.map(i => i.track.cls).join(',').toUpperCase().slice(0, 15) : '—', red: ST.items.some(i => i.alert) });
     }
     rows.push(
-        { k: 'VIS',    v: ST.vis ? 'THERMAL' : 'OPTICAL' },
+        { k: 'VIS',    v: ['OPTICAL', 'THERMAL', 'MONO'][ST.vis] },
         { k: 'SECTOR', v: sec },
         { k: 'LAT',    v: lat.toFixed(5) + '°' },
         { k: 'LON',    v: lon.toFixed(5) + '°' },
@@ -1181,7 +1260,7 @@ function drawAsm(now, dpr){
     } else {
         const n = Math.min(maxN, asmLines.length);
         ctx.font = (7.5 * dpr) + "px 'Share Tech Mono'";
-        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillStyle = ST.vis === 2 ? 'rgba(30,27,18,0.3)' : 'rgba(255,255,255,0.12)';
         for (let i = 0; i < n; i++)
             ctx.fillText(asmLines[asmLines.length - n + i], 10 * dpr, (yStart + i * step) * dpr);
     }
@@ -1197,7 +1276,9 @@ function drawSecondary(dpr, T){
         const a = v2s(t.box.x, t.box.y, T), b = v2s(t.box.x + t.box.w, t.box.y + t.box.h, T);
         const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
         const tier = getThreat(t.cls);
-        const col = tier === 'HIGH' ? 'rgba(255,80,80,0.4)' : tier === 'MED' ? 'rgba(255,160,0,0.35)' : 'rgba(200,200,255,0.25)';
+        const col = ST.vis === 2
+            ? (tier === 'HIGH' ? 'rgba(20,18,12,0.6)' : 'rgba(45,41,30,0.4)')
+            : tier === 'HIGH' ? 'rgba(255,80,80,0.4)' : tier === 'MED' ? 'rgba(255,160,0,0.35)' : 'rgba(200,200,255,0.25)';
         ctx.strokeStyle = col; ctx.shadowColor = col; ctx.lineWidth = 1 * dpr;
         ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.strokeRect(rx, ry, rw, rh); ctx.setLineDash([]);
         ctx.fillStyle = col; ctx.font = (9 * dpr) + "px 'Share Tech Mono'";
@@ -1298,7 +1379,9 @@ function drawChildren(dpr, T, rr, rg, rb){
         const tb = it.track.box;
         const a = v2s(tb.x, tb.y, T), b = v2s(tb.x + tb.w, tb.y + tb.h, T);
         const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
-        const col = it.alert ? 'rgba(255,32,32,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(120,200,255,0.55)';
+        const col = ST.vis === 2
+            ? (it.alert ? 'rgba(0,0,0,' + (0.55 + 0.35 * pulse) + ')' : 'rgba(45,41,30,0.5)')
+            : it.alert ? 'rgba(255,32,32,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(120,200,255,0.55)';
         ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = it.alert ? 8 : 3;
         ctx.lineWidth = 1 * dpr;
         ctx.setLineDash([3 * dpr, 3 * dpr]);
@@ -1512,22 +1595,22 @@ function drawDataBlock(cx, cy, dpr, mainColor){
 function drawEwNoise(W, H, dpr){
     const k = ST.ew;
     for (let i = 0; i < Math.round(k * 16); i++){
-        ctx.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.15) + ')';
+        ctx.fillStyle = ST.vis === 2 ? 'rgba(30,27,18,' + (Math.random() * 0.3) + ')' : 'rgba(255,255,255,' + (Math.random() * 0.15) + ')';
         ctx.fillRect(Math.random() * W, Math.random() * H, (1 + Math.random() * 2) * dpr, dpr);
     }
     for (let i = 0; i < 3; i++){
-        ctx.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.08 * k) + ')';
+        ctx.fillStyle = ST.vis === 2 ? 'rgba(30,27,18,' + (Math.random() * 0.2 * k) + ')' : 'rgba(255,255,255,' + (Math.random() * 0.08 * k) + ')';
         ctx.fillRect(0, Math.random() * H, W, (0.5 + Math.random()) * dpr);
     }
 }
 
 function drawCornerDeco(W, H, dpr){
     const s = 30 * dpr;
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0; ctx.setLineDash([]);
+    ctx.strokeStyle = ST.vis === 2 ? 'rgba(30,27,18,0.35)' : 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0; ctx.setLineDash([]);
     [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]].forEach(([x,y,sx,sy]) => {
         ctx.beginPath(); ctx.moveTo(x + sx * s, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * s); ctx.stroke();
     });
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5 * dpr; ctx.setLineDash([5 * dpr, 15 * dpr]);
+    ctx.strokeStyle = ST.vis === 2 ? 'rgba(30,27,18,0.15)' : 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5 * dpr; ctx.setLineDash([5 * dpr, 15 * dpr]);
     ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
     ctx.setLineDash([]);
 }
@@ -1572,6 +1655,10 @@ function draw(now){
     else if (ST.locked){ rr = 255; rg = 220; rb = 50; }
     else if (ST.vis === 1){ rr = 255; rg = 240; rb = 205; }
     else { rr = 200; rg = 220; rb = 255; }
+    if (ST.vis === 2){
+        if (ST.locked){ rr = 15; rg = 13; rb = 8; }
+        else { rr = 62; rg = 57; rb = 42; }
+    }
     const mainColor = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.6 + 0.4 * ST.lockF) + ')';
     const T = coverT();
 
@@ -1596,7 +1683,7 @@ function draw(now){
     drawCornerDeco(W, H, dpr);
     ctx.restore();
 
-    if (ST.locked && now > ST.nextPing){ if (ST.vis === 1) AU.triPing(); else AU.ping(); ST.nextPing = now + 2300; }
+    if (ST.locked && now > ST.nextPing){ if (ST.vis === 1) AU.triPing(); else if (ST.vis === 2) AU.coin(); else AU.ping(); ST.nextPing = now + 2300; }
     if (ST.vis === 1 && now > ST.nextClicks){ AU.clicks(); ST.nextClicks = now + 3800 + Math.random() * 4600; }
 }
 
@@ -1617,7 +1704,7 @@ container.addEventListener('pointerdown', e => {
     }
 });
 botbar.addEventListener('pointerdown', e => e.stopPropagation());
-thermalBtn.addEventListener('click', () => setVision(ST.vis ? 0 : 1));
+thermalBtn.addEventListener('click', () => setVision((ST.vis + 1) % 3));
 muteBtn.addEventListener('click', () => {
     const mute = AU.on;
     AU.setMute(mute);
@@ -1626,7 +1713,7 @@ muteBtn.addEventListener('click', () => {
 window.addEventListener('keydown', e => {
     if (!ST.running) return;
     const k = e.key.toLowerCase();
-    if (k === 't' || k === 'е') setVision(ST.vis ? 0 : 1);
+    if (k === 't' || k === 'е') setVision((ST.vis + 1) % 3);
     if (k === 'm' || k === 'ь') muteBtn.click();
 });
 document.addEventListener('visibilitychange', async () => {
