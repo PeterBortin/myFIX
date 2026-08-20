@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- myFIX v2 // OPTICAL + PREDATOR + MONO + 8/16/32-BIT // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
+<!-- myFIX v2 // T-800 + PREDATOR + MONO-HALFTONE + 8-BIT GB // gallery, WebM rec, pinch-zoom, freeze // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <title>myFIX v2</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -19,7 +19,7 @@ body {
     margin: 0; background: #000; overflow: hidden;
     font-family: var(--mono); user-select: none; -webkit-user-select: none; cursor: crosshair;
 }
-#container { position: relative; width: 100vw; height: 100vh; height: 100dvh; touch-action: manipulation; }
+#container { position: relative; width: 100vw; height: 100vh; height: 100dvh; touch-action: none; }
 
 /* Відео — fallback-шар, коли WebGL живий, ховається (opacity 0), але грає як texture source */
 video {
@@ -281,6 +281,33 @@ body.mono .cm-key { color: rgba(38,34,24,0.45); }
 body.mono .cm-val { color: rgba(38,34,24,0.85); }
 body.mono .cm-val.red { text-shadow: none; }
 
+/* ГАЛЕРЕЯ */
+#galleryPanel { position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,0.9); display: none; flex-direction: column; padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); }
+#galleryPanel.show { display: flex; }
+.gp-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 3px; color: var(--red); border-bottom: 1px solid rgba(255,32,32,0.3); padding-bottom: 8px; margin-bottom: 12px; text-transform: uppercase; }
+#galGrid { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; align-content: start; }
+.gp-cell { display: flex; flex-direction: column; gap: 4px; }
+.gp-cell img, .gp-cell video { width: 100%; aspect-ratio: 1 / 1.09; object-fit: cover; border: 1px solid rgba(255,32,32,0.35); display: block; background: #000; }
+.gp-row { display: flex; gap: 4px; }
+.gp-btn { flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 6px 0; cursor: pointer; }
+.gp-empty { grid-column: 1 / -1; font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 2px; padding: 30px 0; text-align: center; }
+#recBtn.rec { border-color: var(--red); color: var(--red); animation: blink 1s steps(1) infinite; }
+
+/* 8-BIT: піксельний шрифт і GB-зелень для DOM */
+body.gb { --red: #9bbc0f; }
+body.gb .log-entry, body.gb .log-entry.info { color: rgba(139,172,15,0.85); }
+body.gb .sp-key { color: rgba(139,172,15,0.5); }
+body.gb .sp-val { color: rgba(155,188,15,0.9); }
+body.gb .coords { color: rgba(139,172,15,0.6); }
+body.gb .log-entry, body.gb .sp-key, body.gb .sp-val, body.gb .coords, body.gb .hudBtn, body.gb .tb-header, body.gb .tbi, body.gb .tbi-key, body.gb .cm-key, body.gb .cm-val, body.gb #tapHint, body.gb .gp-head, body.gb .gp-btn { font-family: 'Press Start 2P', var(--mono); }
+body.gb .log-entry { font-size: 8px; letter-spacing: 0; line-height: 2.1; }
+body.gb .sp-key, body.gb .tbi-key, body.gb .cm-key { font-size: 6px; letter-spacing: 0.5px; }
+body.gb .sp-val, body.gb .cm-val, body.gb .tbi { font-size: 7px; letter-spacing: 0; }
+body.gb .coords { font-size: 6px; letter-spacing: 0; }
+body.gb .hudBtn, body.gb #tapHint { font-size: 8px; letter-spacing: 0; }
+
+@media (max-width: 560px) { #botLeft { display: none; } }
+
 @media (max-width: 480px) {
     #coordsR { display: none; }
     #statusPanel { width: 160px; }
@@ -346,10 +373,15 @@ body.mono .cm-val.red { text-shadow: none; }
 
     <div id="tapHint">TAP TO CAPTURE</div>
 
+    <div id="galleryPanel">
+        <div class="gp-head"><span>// captures</span><button class="hudBtn" id="galClose">X</button></div>
+        <div id="galGrid"></div>
+    </div>
+
     <div id="statusPanel" style="display:none">
         <div class="sp-row"><span class="sp-key">network</span><span class="sp-val active">ONLINE</span></div>
         <div class="sp-row"><span class="sp-key">model</span><span class="sp-val" id="modelStat">LOADING</span></div>
-        <div class="sp-row"><span class="sp-key">vision</span><span class="sp-val" id="visVal">OPTICAL</span></div>
+        <div class="sp-row"><span class="sp-key">vision</span><span class="sp-val" id="visVal">T-800</span></div>
         <div class="sp-row"><span class="sp-key">mode</span><span class="sp-val" id="modeVal">PASSIVE</span></div>
         <div class="sp-row"><span class="sp-key">objects</span><span class="sp-val" id="objCount">00</span></div>
         <div class="sp-row"><span class="sp-key">lock</span><span class="sp-val" id="lockStat">--</span></div>
@@ -373,7 +405,10 @@ body.mono .cm-val.red { text-shadow: none; }
             <span class="coords" id="coordsR">ALT --m  SPD --kts  HDG --°</span>
         </div>
         <div id="botRight">
-            <button class="hudBtn" id="thermalBtn">OPT</button>
+            <button class="hudBtn" id="thermalBtn">T80</button>
+            <button class="hudBtn" id="camBtn">CAM</button>
+            <button class="hudBtn" id="recBtn">REC</button>
+            <button class="hudBtn" id="galBtn">GAL</button>
             <button class="hudBtn" id="muteBtn">SND</button>
         </div>
     </div>
@@ -400,7 +435,14 @@ function coverTransform(vw, vh, sw, sh){
     const scale = Math.max(sw / vw, sh / vh);
     return { scale, ox: (sw - vw * scale) / 2, oy: (sh - vh * scale) / 2 };
 }
-function v2s(x, y, T){ return { x: x * T.scale + T.ox, y: y * T.scale + T.oy }; }
+function v2s(x, y, T){
+    let sx = x * T.scale + T.ox, sy = y * T.scale + T.oy;
+    if (T.zoom && T.zoom !== 1){
+        sx = (sx - T.zcx) * T.zoom + T.zcx;
+        sy = (sy - T.zcy) * T.zoom + T.zcy;
+    }
+    return { x: sx, y: sy };
+}
 
 function iou(a, b){
     const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
@@ -565,8 +607,8 @@ const CFG = {
     trackTTL: 700, iouThr: 0.3, smooth: 0.4,
     lockDist: 130, glMaxDpr: 1.5, hudMaxDpr: 2, wipeMs: 1400
 };
-const VIS_NAMES = ['OPTICAL', 'THERMAL', 'MONO', '8-BIT', '16-BIT', '32-BIT'];
-const VIS_SHORT = ['OPT', 'THR', 'MON', '8BT', '16B', '32B'];
+const VIS_NAMES = ['T-800', 'PREDATOR', 'MONO', '8-BIT'];
+const VIS_SHORT = ['T80', 'PRD', 'MON', '8BT'];
 const WASM_URL   = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
 const MODEL_OBJ  = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite';
 const MODEL_POSE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
@@ -585,6 +627,8 @@ const threatBox = $('threatBox'), threatLines = $('threatLines');
 const modelStat = $('modelStat'), modeVal = $('modeVal'), visVal = $('visVal');
 const objCount = $('objCount'), lockStat = $('lockStat'), confBar = $('confBar'), ewBar = $('ewBar'), captureStat = $('captureStat');
 const thermalBtn = $('thermalBtn'), muteBtn = $('muteBtn');
+const camBtn = $('camBtn'), recBtn = $('recBtn'), galBtn = $('galBtn');
+const galleryPanel = $('galleryPanel'), galGrid = $('galGrid'), galClose = $('galClose');
 const cmRows = $('cmRows'), pStampTime = $('pStampTime'), pStampId = $('pStampId'), capturedFlash = $('capturedFlash');
 const coordsL = $('coordsL'), coordsR = $('coordsR');
 
@@ -596,7 +640,8 @@ const ST = {
     locked: false, lockF: 0,
     vis: 0, wipeFrom: 0, wipeTo: 0, wipeStart: -1e9,
     ew: 0, nextEW: Infinity, nextClicks: 0, nextPing: 0,
-    captures: 0, cardVisible: false, tSig: '', wake: null
+    captures: 0, cardVisible: false, tSig: '', wake: null,
+    zoom: 1, frozen: false, facing: 'environment', score: 0, combo: 0, comboAt: 0
 };
 let objDet = null, poseDet = null, faceDet = null;
 let lastObj = 0, lastPose = 0, lastFace = 0;
@@ -605,10 +650,15 @@ let targetPos  = { x: innerWidth / 2, y: innerHeight / 2, active: false };
 let pulseTime = 0, scanAngle = 0, textTick = 0, glitchActive = 0;
 let lastFrame = performance.now(), lastGl = 0, hudDpr = 1;
 const alertLog = new Map();
+let gallery = [], popups = [], recState = { on: false, rec: null, chunks: [], t0: 0 };
 let lat = 55.7558 + (Math.random() - 0.5) * 0.01;
 let lon = 37.6173 + (Math.random() - 0.5) * 0.01;
 
-function coverT(){ return coverTransform(video.videoWidth || 640, video.videoHeight || 480, innerWidth, innerHeight); }
+function coverT(){
+    const T = coverTransform(video.videoWidth || 640, video.videoHeight || 480, innerWidth, innerHeight);
+    T.zoom = ST.zoom; T.zcx = innerWidth / 2; T.zcy = innerHeight / 2;
+    return T;
+}
 function resize(){
     hudDpr = Math.min(devicePixelRatio || 1, CFG.hudMaxDpr);
     canvas.width  = Math.round(innerWidth * hudDpr);
@@ -712,42 +762,6 @@ const AU = {
         this.osc('square', 587, 587, t + 0.06, 0.08, 0.07);
         this.osc('square', 1175, 1175, t + 0.16, 0.22, 0.07);
     },
-    fmNote(f, t0, dur, peak, sweep){
-        /* FM-синтез: модулятор у частоту носія */
-        if (!this.ctx) return; const c = this.ctx;
-        const car = c.createOscillator(); car.type = 'sawtooth';
-        car.frequency.setValueAtTime(f, t0);
-        if (sweep) car.frequency.exponentialRampToValueAtTime(f * 2, t0 + dur * 0.9);
-        const mod = c.createOscillator(); mod.frequency.setValueAtTime(f * 2.01, t0);
-        const mg = c.createGain(); mg.gain.setValueAtTime(f * 1.6, t0);
-        mg.gain.exponentialRampToValueAtTime(1, t0 + dur);
-        mod.connect(mg); mg.connect(car.frequency);
-        const g = c.createGain(); this.env(g, t0, 0.02, peak, dur);
-        car.connect(g); g.connect(this.master);
-        car.start(t0); car.stop(t0 + dur + 0.15);
-        mod.start(t0); mod.stop(t0 + dur + 0.15);
-    },
-    fmSting(){
-        if (!this.ctx) return; const t = this.now();
-        this.fmNote(220, t, 0.55, 0.05, true);
-        this.fmNote(330, t + 0.05, 0.55, 0.05, true);
-    },
-    cdBoot(){
-        /* розкрутка диска + детюн-пад */
-        if (!this.ctx) return; const c = this.ctx, t = this.now();
-        this.nz(t, 0.9, 0.05, 'bandpass', 180, 2600, 2);
-        const pad = f => {
-            const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
-            const fl = c.createBiquadFilter(); fl.type = 'lowpass';
-            fl.frequency.setValueAtTime(220, t);
-            fl.frequency.exponentialRampToValueAtTime(1400, t + 0.8);
-            const g = c.createGain(); this.env(g, t + 0.1, 0.3, 0.045, 0.8);
-            o.connect(fl); fl.connect(g); g.connect(this.master);
-            o.start(t + 0.1); o.stop(t + 1.4);
-        };
-        pad(110); pad(110.8); pad(165);
-        this.osc('sine', 1200, 1200, t + 0.95, 0.05, 0.04);
-    },
     coin(){
         if (!this.ctx) return; const t = this.now();
         this.osc('square', 988, 988, t, 0.06, 0.05);
@@ -758,29 +772,34 @@ const AU = {
         this.osc('square', 1900, 1900, t, 0.02, 0.04);
         this.osc('square', 1300, 1300, t + 0.09, 0.03, 0.035);
     },
-    fmBlip(){
-        if (!this.ctx) return;
-        this.fmNote(880, this.now(), 0.18, 0.05, false);
-    },
-    sonar32(){
+    scoreJingle(){
         if (!this.ctx) return; const t = this.now();
-        this.osc('sine', 900, 900, t, 0.09, 0.045);
-        this.osc('sine', 620, 620, t + 0.22, 0.12, 0.02);
+        [784, 988, 1319].forEach((f, i) => this.osc('square', f, f, t + i * 0.06, 0.05, 0.06));
+    },
+    bossJingle(){
+        if (!this.ctx) return; const t = this.now();
+        [392, 392, 311, 466].forEach((f, i) => this.osc('square', f, f, t + i * 0.11, 0.09, 0.07));
+    },
+    freezeSnd(on){
+        if (!this.ctx) return; const t = this.now();
+        if (on){ this.osc('sawtooth', 420, 70, t, 0.22, 0.06); this.nz(t, 0.03, 0.05, 'highpass', 2500, 0, 1); }
+        else this.osc('sawtooth', 70, 420, t, 0.2, 0.05);
+    },
+    recSnd(on){
+        if (!this.ctx) return; const t = this.now();
+        if (on){ this.osc('square', 900, 900, t, 0.05, 0.05); this.osc('square', 1200, 1200, t + 0.08, 0.06, 0.05); }
+        else this.osc('square', 600, 600, t, 0.09, 0.05);
     },
     swapFor(v){
         if (v === 1) this.visionSwap(true);
         else if (v === 2) this.monoSwap();
         else if (v === 3) this.gbBoot();
-        else if (v === 4) this.fmSting();
-        else if (v === 5) this.cdBoot();
         else this.visionSwap(false);
     },
     pingFor(v){
         if (v === 1) this.triPing();
         else if (v === 2) this.inkTick();
         else if (v === 3) this.coin();
-        else if (v === 4) this.fmBlip();
-        else if (v === 5) this.sonar32();
         else this.ping();
     },
     humStart(){
@@ -857,7 +876,9 @@ uniform float uWipe;
 uniform float uTime;
 uniform float uEW;
 uniform vec2 uRes;
-uniform vec4 uPixels; /* x:mono y:8bit z:16bit w:32bit, розмір клітинки в px */
+uniform vec2 uPixels; /* x: mono halftone, y: 8bit */
+uniform float uSob;   /* крок градієнта контурів, px */
+uniform float uZoom;
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
@@ -875,53 +896,60 @@ vec3 palette(float t){
 float Bayer2(vec2 a){ a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
 float Bayer4(vec2 a){ return Bayer2(0.5 * a) * 0.25 + Bayer2(a); }
 
-vec2 cellUV(float pix, float off){
-    vec2 c = floor(gl_FragCoord.xy / pix);
-    vec2 u = ((c * pix + pix * 0.5) / uRes) * uUVScale + uUVOff;
-    u.x += off;
-    return u;
-}
+/* екранна норм-координата -> текстурна, з урахуванням цифрового зуму */
+vec2 zuv(vec2 s){ return ((s - 0.5) / uZoom + 0.5) * uUVScale + uUVOff; }
 float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
 
-vec3 modePick(float m, vec3 o, vec3 t, vec3 mo, vec3 g, vec3 s, vec3 p){
+vec3 modePick(float m, vec3 o, vec3 t, vec3 mo, vec3 g){
     vec3 c = mix(o, t, clamp(m, 0.0, 1.0));
     c = mix(c, mo, clamp(m - 1.0, 0.0, 1.0));
     c = mix(c, g,  clamp(m - 2.0, 0.0, 1.0));
-    c = mix(c, s,  clamp(m - 3.0, 0.0, 1.0));
-    c = mix(c, p,  clamp(m - 4.0, 0.0, 1.0));
     return c;
 }
 
 void main(){
     float band = step(0.965, hash(vec2(floor(vUV.y * 48.0), floor(uTime * 9.0)))) * uEW;
     float off = (hash(vec2(floor(vUV.y * 48.0), floor(uTime * 31.0))) - 0.5) * 0.09 * band;
-    vec2 uv = vUV * uUVScale + uUVOff;
+    vec2 uv = zuv(vUV);
     uv.x += off;
     vec3 c = texture2D(uTex, uv).rgb;
     float l = lum(c);
 
-    /* 0 OPTICAL */
-    vec3 opt = mix(vec3(l), c, 0.12);
-    opt = (opt - 0.5) * 1.32 + 0.5;
-    opt = clamp(opt, 0.0, 1.0) * vec3(0.42, 0.47, 0.56);
+    /* 0 T-800: червоний градинг, легкий, з тінями */
+    vec3 ob = mix(vec3(l), c, 0.15);
+    ob = clamp((ob - 0.5) * 1.3 + 0.5, 0.0, 1.0);
+    vec3 opt = ob * vec3(0.86, 0.30, 0.26) + vec3(0.05, 0.0, 0.0);
 
-    /* 1 THERMAL */
+    /* 1 PREDATOR */
     float lt = pow(clamp(l * 1.15, 0.0, 1.0), 0.8);
     lt += (hash(vUV * vec2(431.0, 917.0) + uTime * 3.0) - 0.5) * 0.05;
     vec3 thr = palette(clamp(lt, 0.0, 1.0));
 
-    /* 2 MONO: дизеринг Байєра, чорнило на папері */
-    vec2 cM = floor(gl_FragCoord.xy / uPixels.x);
-    float lq = lum(texture2D(uTex, cellUV(uPixels.x, off)).rgb);
-    lq = clamp((lq - 0.5) * 1.3 + 0.58, 0.0, 1.0);
-    vec2 fM = fract(gl_FragCoord.xy / uPixels.x);
-    float dotm = step(max(abs(fM.x - 0.5), abs(fM.y - 0.5)), 0.42);
-    float ink = step(lq, Bayer4(cM)) * dotm;
-    vec3 mono = mix(vec3(0.93, 0.92, 0.88), vec3(0.22, 0.20, 0.14), ink);
+    /* 2 MONO: газетний halftone під 45 + градієнтні контури (Sobel-хрест) */
+    mat2 Rf = mat2(0.7071, 0.7071, -0.7071, 0.7071);
+    mat2 Ri = mat2(0.7071, -0.7071, 0.7071, 0.7071);
+    vec2 pr = Rf * gl_FragCoord.xy;
+    vec2 cM = floor(pr / uPixels.x);
+    vec2 ctr = Ri * ((cM + 0.5) * uPixels.x);
+    vec2 um = zuv(ctr / uRes);
+    um.x += off;
+    float lq = lum(texture2D(uTex, um).rgb);
+    lq = clamp((lq - 0.5) * 1.25 + 0.56, 0.0, 1.0);
+    float dk = 1.0 - lq;
+    vec2 fM = pr / uPixels.x - (cM + 0.5);
+    float dotInk = step(length(fM), sqrt(dk) * 0.72);
+    vec2 e = vec2(uSob) / uRes;
+    float gx = lum(texture2D(uTex, zuv(vUV + vec2(e.x, 0.0))).rgb) - lum(texture2D(uTex, zuv(vUV - vec2(e.x, 0.0))).rgb);
+    float gy = lum(texture2D(uTex, zuv(vUV + vec2(0.0, e.y))).rgb) - lum(texture2D(uTex, zuv(vUV - vec2(0.0, e.y))).rgb);
+    float edge = smoothstep(0.13, 0.32, length(vec2(gx, gy)));
+    float ink = max(dotInk, edge);
+    vec3 mono = mix(vec3(0.93, 0.92, 0.88), vec3(0.20, 0.18, 0.13), ink);
 
     /* 3 8-BIT: Game Boy DMG — 4 зелені + LCD-сітка */
     vec2 cG = floor(gl_FragCoord.xy / uPixels.y);
-    float l8 = lum(texture2D(uTex, cellUV(uPixels.y, off)).rgb);
+    vec2 uvG = zuv((cG * uPixels.y + uPixels.y * 0.5) / uRes);
+    uvG.x += off;
+    float l8 = lum(texture2D(uTex, uvG).rgb);
     l8 = clamp((l8 - 0.5) * 1.25 + 0.55, 0.0, 1.0);
     float lv = clamp(floor(l8 * 4.0 + Bayer4(cG) * 0.9), 0.0, 3.0);
     vec3 gb = mix(mix(vec3(0.06, 0.22, 0.06), vec3(0.19, 0.38, 0.19), step(0.5, lv)),
@@ -930,31 +958,12 @@ void main(){
     vec2 fG = fract(gl_FragCoord.xy / uPixels.y);
     gb *= 1.0 - 0.16 * step(0.9, max(fG.x, fG.y));
 
-    /* 4 16-BIT: постеризація 5 рівнів + дизер + CRT-рядки, соковита насиченість */
-    vec2 cS = floor(gl_FragCoord.xy / uPixels.z);
-    vec3 t16 = texture2D(uTex, cellUV(uPixels.z, off)).rgb;
-    t16 = clamp((t16 - 0.5) * 1.25 + 0.52, 0.0, 1.0);
-    t16 = clamp(mix(vec3(lum(t16)), t16, 1.5), 0.0, 1.0);
-    float d16 = (Bayer4(cS) - 0.5) / 5.0;
-    vec3 snes = floor((t16 + d16) * 5.0 + 0.5) / 5.0;
-    snes *= 1.0 - 0.16 * step(0.66, fract(gl_FragCoord.y / 3.0));
-
-    /* 5 32-BIT: PS1 — RGB555 + дизер + афінне тремтіння текстури */
-    vec2 cP = floor(gl_FragCoord.xy / uPixels.w);
-    vec2 uvP = cellUV(uPixels.w, off);
-    uvP += vec2(sin(uvP.y * 40.0 + uTime * 2.0), cos(uvP.x * 36.0 + uTime * 1.7)) * 0.0022;
-    vec3 t32 = texture2D(uTex, uvP).rgb;
-    t32 = clamp((t32 - 0.5) * 1.15 + 0.52, 0.0, 1.0);
-    float dps = (Bayer4(cP) - 0.5) / 31.0 * 1.5;
-    vec3 ps1 = floor((t32 + dps) * 31.0 + 0.5) / 31.0;
-    ps1 *= vec3(0.98, 0.97, 0.93);
-
     /* wipe зліва направо */
     float edgeN = (hash(vec2(vUV.y * 23.0, floor(uTime * 20.0))) - 0.5) * 0.05;
     float xb = 1.16 * uWipe - 0.08;
     float k = 1.0 - smoothstep(xb - 0.05, xb + 0.05, vUV.x + edgeN);
-    vec3 colA = modePick(uA, opt, thr, mono, gb, snes, ps1);
-    vec3 colB = modePick(uB, opt, thr, mono, gb, snes, ps1);
+    vec3 colA = modePick(uA, opt, thr, mono, gb);
+    vec3 colB = modePick(uB, opt, thr, mono, gb);
     vec3 col = mix(colA, colB, k);
 
     float tr = step(0.001, uWipe) * (1.0 - step(0.999, uWipe));
@@ -1005,7 +1014,7 @@ const GL = {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         const U = n => gl.getUniformLocation(pr, n);
-        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW'), uRes: U('uRes'), uPixels: U('uPixels') };
+        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW'), uRes: U('uRes'), uPixels: U('uPixels'), uSob: U('uSob'), uZoom: U('uZoom') };
         gl.uniform1i(U('uTex'), 0);
         this.gl = gl; this.ok = true;
         cv.addEventListener('webglcontextlost', () => { this.ok = false; }, false);
@@ -1017,7 +1026,7 @@ const GL = {
         const dpr = Math.min(devicePixelRatio || 1, CFG.glMaxDpr);
         const W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
         if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); }
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
+        if (!ST.frozen) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
         const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
         const va = vw / vh, ca = innerWidth / innerHeight;
         let sx = 1, sy = 1, ox = 0, oy = 0;
@@ -1032,11 +1041,9 @@ const GL = {
         gl.uniform1f(this.uni.uTime, now / 1000);
         gl.uniform1f(this.uni.uEW, ST.ew);
         gl.uniform2f(this.uni.uRes, W, H);
-        gl.uniform4f(this.uni.uPixels,
-            Math.max(2, Math.round(2 * dpr)),
-            Math.max(5, Math.round(6 * dpr)),
-            Math.max(3, Math.round(3 * dpr)),
-            Math.max(2, Math.round(2 * dpr)));
+        gl.uniform2f(this.uni.uPixels, Math.max(4, Math.round(3 * dpr)), Math.max(5, Math.round(6 * dpr)));
+        gl.uniform1f(this.uni.uSob, Math.max(2, Math.round(1.5 * dpr)));
+        gl.uniform1f(this.uni.uZoom, ST.zoom);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 };
@@ -1050,10 +1057,11 @@ function setVision(v){
     AU.swapFor(v);
     AU.droneSet(v === 1);
     document.body.classList.toggle('mono', v === 2);
+    document.body.classList.toggle('gb', v === 3);
     thermalBtn.classList.toggle('on', v !== 0);
     thermalBtn.textContent = VIS_SHORT[v];
     visVal.textContent = VIS_NAMES[v];
-    const swapMsgs = ['НАЗАД НА ОПТИКУ', 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА', 'МОНОХРОМ. ПРИВІТ З 90-Х', '8-BIT. КАРТРИДЖ ПРОДУВ, ПОГНАЛИ', '16-BIT. АРКАДА НА МАКСИМАЛКАХ', '32-BIT. ДИСК РОЗКРУТИВСЯ'];
+    const swapMsgs = ['T-800 ONLINE. ЧЕРВОНЕ БАЧЕННЯ', 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА', 'МОНОХРОМ. ПРИВІТ З 90-Х', '8-BIT. КАРТРИДЖ ПРОДУВ, ПОГНАЛИ'];
     typeLog(swapMsgs[v], v ? 'threat' : 'info');
     if (v === 1) ST.nextClicks = performance.now() + 900;
 }
@@ -1129,6 +1137,7 @@ function tsFor(o){ o._ts = Math.max((o._ts || 0) + 1, performance.now()); return
 async function detectLoop(){
     if (!ST.running) return;
     if (document.hidden){ setTimeout(detectLoop, 400); return; }
+    if (ST.frozen){ setTimeout(detectLoop, 120); return; }
     const now = performance.now();
     try {
         if (video.readyState >= 2){
@@ -1228,6 +1237,7 @@ function onLock(p){
     lockStat.className = 'sp-val active';
     AU.lockOn();
     if (ST.vis === 1) AU.clicks();
+    if (ST.vis === 3 && getThreat(p.cls) === 'HIGH') AU.bossJingle();
     ST.nextPing = performance.now() + 1200;
     typeLog('ЗАЛОЧИВ — ' + p.cls.toUpperCase() + ' [' + getThreat(p.cls) + ']', 'threat');
     if (!ST.cardVisible) tapHint.classList.add('show');
@@ -1330,6 +1340,8 @@ function capturePortrait(t){
         d.innerHTML = '<span class="cm-key">' + r.k + '</span><span class="cm-val' + (r.red ? ' red' : '') + '">' + r.v + '</span>';
         cmRows.appendChild(d);
     });
+    addToGallery(t);
+    if (ST.vis === 3) addScore(getThreat(t.cls));
     capturedFlash.classList.remove('flash'); void capturedFlash.offsetWidth; capturedFlash.classList.add('flash');
     flashOv.classList.remove('flash'); void flashOv.offsetWidth; flashOv.classList.add('flash');
     AU.shutter();
@@ -1737,79 +1749,6 @@ function draw8bitReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
     ctx.restore();
 }
 
-/* ── 16-BIT приціл: shmup lock-on — стрілки збігаються, кільце ромбів ── */
-function draw16bitReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
-    ctx.save(); ctx.translate(cx, cy);
-    ctx.strokeStyle = mainColor; ctx.fillStyle = mainColor;
-    ctx.shadowColor = mainColor; ctx.shadowBlur = 6 + 8 * lf;
-    const n = 8, Rr = (96 - 18 * lf) * dpr;
-    ctx.save(); ctx.rotate(scanAngle * 1.4);
-    for (let i = 0; i < n; i++){
-        const a = i * Math.PI * 2 / n;
-        const x = Math.cos(a) * Rr, y = Math.sin(a) * Rr, s = 4 * dpr;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(a);
-        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(pulseTime * 3 + i);
-        ctx.beginPath();
-        ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0);
-        ctx.closePath(); ctx.fill();
-        ctx.restore();
-    }
-    ctx.restore(); ctx.globalAlpha = 1;
-    const D = (86 - 40 * lf) * dpr, A = 12 * dpr;
-    for (let i = 0; i < 4; i++){
-        ctx.save(); ctx.rotate(i * Math.PI / 2 + Math.sin(pulseTime * 2) * 0.05 * (1 - lf));
-        ctx.beginPath();
-        ctx.moveTo(0, -D - A); ctx.lineTo(A * 0.7, -D); ctx.lineTo(-A * 0.7, -D);
-        ctx.closePath(); ctx.fill();
-        ctx.restore();
-    }
-    ctx.save(); ctx.rotate(Math.PI / 4 + scanAngle * (1 - lf));
-    const s = (7 + 3 * lf) * dpr;
-    ctx.strokeStyle = mainColor; ctx.lineWidth = 2 * dpr;
-    ctx.strokeRect(-s, -s, 2 * s, 2 * s);
-    ctx.restore();
-    ctx.restore();
-}
-
-/* ── 32-BIT приціл: PS1 лоу-полі — гекси з вертексним снапом і тремтінням ── */
-function draw32bitReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
-    ctx.save(); ctx.translate(cx, cy);
-    ctx.strokeStyle = mainColor; ctx.fillStyle = mainColor; ctx.shadowBlur = 0;
-    const snap = 3 * dpr;
-    const qv = v => Math.round(v / snap) * snap;
-    const hex = (R, rot, w, alpha) => {
-        ctx.lineWidth = w; ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++){
-            const a = rot + i * Math.PI / 3;
-            const x = qv(Math.cos(a) * R) + (Math.random() - 0.5) * dpr;
-            const y = qv(Math.sin(a) * R) + (Math.random() - 0.5) * dpr;
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.closePath(); ctx.stroke();
-    };
-    const R = (98 - 24 * lf) * dpr;
-    hex(R, scanAngle * (1 - lf * 0.9), 2 * dpr, 0.9);
-    hex(R * 0.72, -scanAngle * 1.5 * (1 - lf * 0.9) + Math.PI / 6, 1.2 * dpr, 0.55);
-    for (let i = 0; i < 3; i++){
-        ctx.save(); ctx.rotate(i * 2 * Math.PI / 3 + scanAngle * 0.5 * (1 - lf));
-        ctx.globalAlpha = 0.35 + 0.3 * lf;
-        ctx.beginPath();
-        ctx.moveTo(qv(0), qv(-R * 0.45));
-        ctx.lineTo(qv(6 * dpr), qv(-R * 0.62));
-        ctx.lineTo(qv(-6 * dpr), qv(-R * 0.62));
-        ctx.closePath(); ctx.fill();
-        ctx.restore();
-    }
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 1.5 * dpr;
-    const c = 8 * dpr;
-    ctx.beginPath();
-    ctx.moveTo(-c, 0); ctx.lineTo(c, 0); ctx.moveTo(0, -c); ctx.lineTo(0, c);
-    ctx.stroke();
-    ctx.restore();
-}
-
 /* ── Тайп-блок біля ретикла ── */
 function drawDataBlock(cx, cy, dpr, mainColor){
     const lines = currentInfo();
@@ -1873,7 +1812,205 @@ function drawCornerDeco(W, H, dpr){
     ctx.setLineDash([]);
 }
 
-const RETICLES = [drawReticle, drawPredReticle, drawMonoReticle, draw8bitReticle, draw16bitReticle, draw32bitReticle];
+/* ── 8-BIT: спрайти, SCORE/combo, HP-бар ── */
+const SPR_SKULL = ['01110','11111','10101','11111','01010'];
+const SPR_ALERT = ['00100','00100','00100','00000','00100'];
+function drawSprite(rows, x, y, s, color){
+    ctx.fillStyle = color;
+    for (let r = 0; r < rows.length; r++)
+        for (let cIdx = 0; cIdx < rows[r].length; cIdx++)
+            if (rows[r][cIdx] === '1') ctx.fillRect(x + cIdx * s, y + r * s, s, s);
+}
+function addScore(tier){
+    const now = performance.now();
+    ST.combo = (now - ST.comboAt < 6000) ? ST.combo + 1 : 1;
+    ST.comboAt = now;
+    const base = tier === 'HIGH' ? 300 : tier === 'MED' ? 200 : 100;
+    const pts = base * ST.combo;
+    ST.score += pts;
+    popups.push({ text: '+' + pts + (ST.combo > 1 ? ' x' + ST.combo : ''), x: currentPos.x + 24, y: currentPos.y - 30, born: now });
+    AU.scoreJingle();
+}
+function drawGbUI(dpr, T){
+    ctx.save(); ctx.shadowBlur = 0;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(155,188,15,0.9)';
+    ctx.font = (8 * dpr) + "px 'Press Start 2P'";
+    ctx.fillText('SCORE ' + String(ST.score).padStart(6, '0') + (ST.combo > 1 ? '  x' + ST.combo : ''), canvas.width / 2, 78 * dpr);
+    ctx.textAlign = 'left';
+    const p = ST.primary;
+    if (p && targetPos.active){
+        const a = v2s(p.box.x, p.box.y, T);
+        const bpx = Math.max(4, Math.round(5 * dpr));
+        const bx = Math.round(a.x * dpr / bpx) * bpx;
+        const by = Math.round(a.y * dpr / bpx) * bpx - 4 * bpx;
+        const hp = Math.round(p.score * 10);
+        for (let i = 0; i < 10; i++){
+            ctx.fillStyle = i < hp ? 'rgba(155,188,15,0.95)' : 'rgba(48,98,48,0.55)';
+            ctx.fillRect(bx + i * (bpx + Math.ceil(dpr)), by, bpx, bpx * 1.6);
+        }
+        const tier = getThreat(p.cls);
+        if (tier === 'HIGH') drawSprite(SPR_SKULL, bx - 7 * bpx, by - bpx, bpx, 'rgba(155,188,15,0.95)');
+        else if (tier === 'MED') drawSprite(SPR_ALERT, bx - 5 * bpx, by - bpx, bpx, 'rgba(139,172,15,0.8)');
+    }
+    const now = performance.now();
+    popups = popups.filter(pp => now - pp.born < 1000);
+    for (const pp of popups){
+        const k = (now - pp.born) / 1000;
+        ctx.globalAlpha = 1 - k;
+        ctx.fillStyle = 'rgba(155,188,15,1)';
+        ctx.font = (9 * dpr) + "px 'Press Start 2P'";
+        ctx.fillText(pp.text, pp.x * dpr, (pp.y - 34 * k) * dpr);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+}
+
+/* ── Індикатори станів по центру зверху (потрапляють у запис) ── */
+function drawIndicators(now, dpr, W){
+    ctx.save(); ctx.textAlign = 'center'; ctx.shadowBlur = 0;
+    const col = ST.vis === 2 ? 'rgba(30,27,18,0.8)' : ST.vis === 3 ? 'rgba(155,188,15,0.85)' : 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = col;
+    ctx.font = (9 * dpr) + "px 'Share Tech Mono'";
+    let y = 26 * dpr;
+    if (ST.zoom > 1.01){ ctx.fillText('ZOOM x' + ST.zoom.toFixed(1), W / 2, y); y += 14 * dpr; }
+    if (ST.frozen){ ctx.fillText('|| FREEZE', W / 2, y); y += 14 * dpr; }
+    if (recState.on && Math.floor(now / 500) % 2 === 0){
+        ctx.fillStyle = ST.vis === 2 ? 'rgba(30,27,18,0.9)' : 'rgba(255,40,40,0.9)';
+        const s = Math.floor((now - recState.t0) / 1000);
+        ctx.fillText('* REC ' + String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'), W / 2, y);
+    }
+    ctx.restore();
+}
+
+/* ── Галерея: капчура як самодостатній PNG + шеринг ── */
+function addToGallery(t){
+    const S = 390, F = 34;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S + F;
+    const c2 = cv.getContext('2d');
+    c2.imageSmoothingEnabled = false;
+    c2.fillStyle = '#000'; c2.fillRect(0, 0, S, S + F);
+    const pad = 0.15;
+    if (GL.ok){
+        const T = coverT();
+        const a = v2s(t.box.x, t.box.y, T);
+        const b = v2s(t.box.x + t.box.w, t.box.y + t.box.h, T);
+        let w = b.x - a.x, h = b.y - a.y;
+        let x = a.x - w * pad, y = a.y - h * pad;
+        w *= 1 + pad * 2; h *= 1 + pad * 2;
+        x = Math.max(0, x); y = Math.max(0, y);
+        w = Math.min(innerWidth - x, w); h = Math.min(innerHeight - y, h);
+        const k = GL.cv.width / innerWidth;
+        if (w > 2 && h > 2) c2.drawImage(GL.cv, x * k, y * k, w * k, h * k, 0, 0, S, S);
+    } else {
+        if (!video.videoWidth) return;
+        let x = t.box.x - t.box.w * pad, y = t.box.y - t.box.h * pad;
+        let w = t.box.w * (1 + pad * 2), h = t.box.h * (1 + pad * 2);
+        x = Math.max(0, x); y = Math.max(0, y);
+        w = Math.min(video.videoWidth - x, w); h = Math.min(video.videoHeight - y, h);
+        c2.drawImage(video, x, y, w, h, 0, 0, S, S);
+    }
+    c2.fillStyle = '#111'; c2.fillRect(0, S, S, F);
+    c2.fillStyle = '#ff2020'; c2.font = "12px 'Share Tech Mono'";
+    c2.fillText('myFIX // ' + t.cls.toUpperCase() + ' ' + t.id + ' ' + ts(), 10, S + 22);
+    cv.toBlob(blob => {
+        if (!blob) return;
+        gallery.unshift({ blob, url: URL.createObjectURL(blob), video: false });
+        while (gallery.length > 24){ const old = gallery.pop(); URL.revokeObjectURL(old.url); }
+    }, 'image/png');
+}
+function renderGallery(){
+    galGrid.innerHTML = '';
+    if (!gallery.length){
+        galGrid.innerHTML = '<div class="gp-empty">ПУСТО. ЗАЛОЧ ЦІЛЬ І ТИЦНИ.</div>';
+        return;
+    }
+    gallery.forEach((g, i) => {
+        const cell = document.createElement('div'); cell.className = 'gp-cell';
+        const media = document.createElement(g.video ? 'video' : 'img');
+        media.src = g.url;
+        if (g.video){ media.muted = true; media.loop = true; media.playsInline = true; media.autoplay = true; }
+        const row = document.createElement('div'); row.className = 'gp-row';
+        const sh = document.createElement('button'); sh.className = 'gp-btn'; sh.textContent = 'SHR';
+        sh.onclick = () => shareItem(g);
+        const del = document.createElement('button'); del.className = 'gp-btn'; del.textContent = 'DEL';
+        del.onclick = () => { URL.revokeObjectURL(g.url); gallery.splice(i, 1); renderGallery(); };
+        row.append(sh, del);
+        cell.append(media, row);
+        galGrid.appendChild(cell);
+    });
+}
+async function shareItem(g){
+    const ext = g.video ? (g.blob.type.indexOf('mp4') >= 0 ? 'mp4' : 'webm') : 'png';
+    const file = new File([g.blob], 'myfix_' + Date.now() + '.' + ext, { type: g.blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+        try { await navigator.share({ files: [file] }); return; } catch (e) {}
+    }
+    const a = document.createElement('a');
+    a.href = g.url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ── Запис WebM: композит GL+HUD, звук з WebAudio ── */
+let recCanvas = null, recCtx = null;
+function startRec(){
+    if (recState.on || !ST.running) return;
+    recCanvas = recCanvas || document.createElement('canvas');
+    recCanvas.width = innerWidth; recCanvas.height = innerHeight;
+    recCtx = recCanvas.getContext('2d');
+    const stream = recCanvas.captureStream(30);
+    if (AU.ctx){
+        if (!AU.recDest){ AU.recDest = AU.ctx.createMediaStreamDestination(); AU.master.connect(AU.recDest); }
+        AU.recDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    }
+    const mimes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+    const mime = mimes.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+    if (!mime){ typeLog('ЗАПИС ТУТ НЕ ПІДТРИМУЄТЬСЯ', 'threat'); return; }
+    try { recState.rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5000000 }); }
+    catch (e){ typeLog('РЕКОРДЕР ВІДМОВИВ', 'threat'); return; }
+    recState.chunks = [];
+    recState.rec.ondataavailable = ev => { if (ev.data && ev.data.size) recState.chunks.push(ev.data); };
+    recState.rec.onstop = () => {
+        const blob = new Blob(recState.chunks, { type: mime.split(';')[0] });
+        gallery.unshift({ blob, url: URL.createObjectURL(blob), video: true });
+        typeLog('ЗАПИС ГОТОВИЙ — ДИВИСЬ GAL', 'threat');
+    };
+    recState.rec.start(500);
+    recState.on = true; recState.t0 = performance.now();
+    recBtn.classList.add('rec');
+    AU.recSnd(true);
+    typeLog('ПИШУ ЕФІР', 'threat');
+}
+function stopRec(){
+    if (!recState.on) return;
+    recState.on = false;
+    recBtn.classList.remove('rec');
+    AU.recSnd(false);
+    try { recState.rec.stop(); } catch (e) {}
+}
+function recTick(){
+    if (!recCtx) return;
+    recCtx.drawImage(GL.ok ? GL.cv : video, 0, 0, recCanvas.width, recCanvas.height);
+    recCtx.drawImage(canvas, 0, 0, recCanvas.width, recCanvas.height);
+}
+
+/* ── Фліп камери ── */
+async function flipCam(){
+    if (!ST.running) return;
+    ST.facing = ST.facing === 'environment' ? 'user' : 'environment';
+    try {
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: ST.facing, width: { ideal: 960 }, height: { ideal: 540 } }, audio: false });
+        video.srcObject = s;
+        await video.play().catch(() => {});
+        typeLog(ST.facing === 'user' ? 'ФРОНТАЛКА' : 'ТИЛОВА КАМЕРА', 'info');
+    } catch (e) {
+        typeLog('КАМЕРА НЕ ПЕРЕМКНУЛАСЬ', 'threat');
+    }
+}
+
+const RETICLES = [drawReticle, drawPredReticle, drawMonoReticle, draw8bitReticle];
 
 /* ── Головний цикл малювання ── */
 function draw(now){
@@ -1942,17 +2079,63 @@ function draw(now){
         ctx.globalAlpha = 1;
     }
     if (ST.ew > 0.15) drawEwNoise(W, H, dpr);
+    if (ST.vis === 3) drawGbUI(dpr, T);
+    drawIndicators(now, dpr, W);
     drawCornerDeco(W, H, dpr);
     ctx.restore();
+    if (recState.on) recTick();
 
     if (ST.locked && now > ST.nextPing){ AU.pingFor(ST.vis); ST.nextPing = now + 2300; }
     if (ST.vis === 1 && now > ST.nextClicks){ AU.clicks(); ST.nextClicks = now + 3800 + Math.random() * 4600; }
 }
 
 /* ── Керування ── */
+const PTRS = new Map();
+let pressT = null, pressPt = null, suppressTap = false, pinch = null;
 container.addEventListener('pointerdown', e => {
     if (!ST.running) return;
     if (e.target.closest && e.target.closest('button')) return;
+    if (galleryPanel.classList.contains('show')) return;
+    PTRS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (PTRS.size === 2){
+        clearTimeout(pressT); pressT = null; suppressTap = true;
+        if (!GL.ok){ pinch = null; return; }
+        const pts = Array.from(PTRS.values());
+        pinch = { d0: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y), z0: ST.zoom };
+        return;
+    }
+    suppressTap = false;
+    pressPt = { x: e.clientX, y: e.clientY };
+    clearTimeout(pressT);
+    pressT = setTimeout(() => {
+        pressT = null; suppressTap = true;
+        if (!GL.ok){ typeLog('FREEZE ХОЧЕ WEBGL', 'threat'); return; }
+        ST.frozen = !ST.frozen;
+        AU.freezeSnd(ST.frozen);
+        typeLog(ST.frozen ? 'КАДР ЗАМОРОЖЕНО' : 'КАДР ВІДПУЩЕНО', 'info');
+    }, 450);
+});
+container.addEventListener('pointermove', e => {
+    const p = PTRS.get(e.pointerId);
+    if (!p) return;
+    p.x = e.clientX; p.y = e.clientY;
+    if (PTRS.size === 2 && pinch){
+        const pts = Array.from(PTRS.values());
+        const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        ST.zoom = Math.min(4, Math.max(1, pinch.z0 * d / Math.max(1, pinch.d0)));
+    } else if (pressPt && pressT && Math.hypot(e.clientX - pressPt.x, e.clientY - pressPt.y) > 14){
+        clearTimeout(pressT); pressT = null;
+    }
+});
+function endPtr(e){
+    PTRS.delete(e.pointerId);
+    if (PTRS.size < 2) pinch = null;
+    if (PTRS.size > 0) return;
+    const quickTap = pressT !== null;
+    clearTimeout(pressT); pressT = null;
+    if (!ST.running) return;
+    if (suppressTap){ suppressTap = false; return; }
+    if (!quickTap) return;
     if (ST.cardVisible){
         const r = captureCard.getBoundingClientRect();
         const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
@@ -1964,9 +2147,18 @@ container.addEventListener('pointerdown', e => {
         showCard();
         typeLog('ПОРТРЕТ Є // ' + ST.primary.cls.toUpperCase(), 'threat');
     }
+}
+container.addEventListener('pointerup', endPtr);
+container.addEventListener('pointercancel', e => {
+    PTRS.delete(e.pointerId); pinch = null;
+    clearTimeout(pressT); pressT = null;
 });
+camBtn.addEventListener('click', flipCam);
+recBtn.addEventListener('click', () => recState.on ? stopRec() : startRec());
+galBtn.addEventListener('click', () => { renderGallery(); galleryPanel.classList.add('show'); });
+galClose.addEventListener('click', () => galleryPanel.classList.remove('show'));
 botbar.addEventListener('pointerdown', e => e.stopPropagation());
-thermalBtn.addEventListener('click', () => setVision((ST.vis + 1) % 6));
+thermalBtn.addEventListener('click', () => setVision((ST.vis + 1) % 4));
 muteBtn.addEventListener('click', () => {
     const mute = AU.on;
     AU.setMute(mute);
@@ -1975,7 +2167,7 @@ muteBtn.addEventListener('click', () => {
 window.addEventListener('keydown', e => {
     if (!ST.running) return;
     const k = e.key.toLowerCase();
-    if (k === 't' || k === 'е') setVision((ST.vis + 1) % 6);
+    if (k === 't' || k === 'е') setVision((ST.vis + 1) % 4);
     if (k === 'm' || k === 'ь') muteBtn.click();
 });
 document.addEventListener('visibilitychange', async () => {
