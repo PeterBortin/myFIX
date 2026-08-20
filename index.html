@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- myFIX v2 // OPTICAL + PREDATOR THERMAL + MONO-90s // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
+<!-- myFIX v2 // OPTICAL + PREDATOR + MONO + 8/16/32-BIT // MediaPipe ObjectDetector + Pose + Face // single-file, CDN-only, mobile-first -->
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
@@ -565,6 +565,8 @@ const CFG = {
     trackTTL: 700, iouThr: 0.3, smooth: 0.4,
     lockDist: 130, glMaxDpr: 1.5, hudMaxDpr: 2, wipeMs: 1400
 };
+const VIS_NAMES = ['OPTICAL', 'THERMAL', 'MONO', '8-BIT', '16-BIT', '32-BIT'];
+const VIS_SHORT = ['OPT', 'THR', 'MON', '8BT', '16B', '32B'];
 const WASM_URL   = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
 const MODEL_OBJ  = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite';
 const MODEL_POSE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
@@ -697,16 +699,89 @@ const AU = {
         if (!this.ctx) return; const t = this.now();
         [620, 830, 1080].forEach((f, i) => this.osc('square', f, f, t + i * 0.09, 0.055, 0.05));
     },
-    retroSwap(){
-        /* бут старої приставки: квадратне арпеджіо + стрічковий тік */
+    monoSwap(){
+        /* матричний принтер: черга тіків + дзвіночок каретки */
         if (!this.ctx) return; const t = this.now();
-        [523, 659, 784, 1046].forEach((f, i) => this.osc('square', f, f, t + i * 0.07, 0.06, 0.06));
-        this.nz(t + 0.3, 0.08, 0.04, 'highpass', 3000, 0, 1);
+        for (let i = 0; i < 9; i++) this.osc('square', 2400 - i * 90, 2400 - i * 90, t + i * 0.045, 0.02, 0.04);
+        this.osc('sine', 1568, 1568, t + 0.48, 0.25, 0.06);
+    },
+    gbBoot(){
+        /* клік картриджа + фірмове "по-лінь" */
+        if (!this.ctx) return; const t = this.now();
+        this.nz(t, 0.03, 0.06, 'highpass', 2000, 0, 1);
+        this.osc('square', 587, 587, t + 0.06, 0.08, 0.07);
+        this.osc('square', 1175, 1175, t + 0.16, 0.22, 0.07);
+    },
+    fmNote(f, t0, dur, peak, sweep){
+        /* FM-синтез: модулятор у частоту носія */
+        if (!this.ctx) return; const c = this.ctx;
+        const car = c.createOscillator(); car.type = 'sawtooth';
+        car.frequency.setValueAtTime(f, t0);
+        if (sweep) car.frequency.exponentialRampToValueAtTime(f * 2, t0 + dur * 0.9);
+        const mod = c.createOscillator(); mod.frequency.setValueAtTime(f * 2.01, t0);
+        const mg = c.createGain(); mg.gain.setValueAtTime(f * 1.6, t0);
+        mg.gain.exponentialRampToValueAtTime(1, t0 + dur);
+        mod.connect(mg); mg.connect(car.frequency);
+        const g = c.createGain(); this.env(g, t0, 0.02, peak, dur);
+        car.connect(g); g.connect(this.master);
+        car.start(t0); car.stop(t0 + dur + 0.15);
+        mod.start(t0); mod.stop(t0 + dur + 0.15);
+    },
+    fmSting(){
+        if (!this.ctx) return; const t = this.now();
+        this.fmNote(220, t, 0.55, 0.05, true);
+        this.fmNote(330, t + 0.05, 0.55, 0.05, true);
+    },
+    cdBoot(){
+        /* розкрутка диска + детюн-пад */
+        if (!this.ctx) return; const c = this.ctx, t = this.now();
+        this.nz(t, 0.9, 0.05, 'bandpass', 180, 2600, 2);
+        const pad = f => {
+            const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+            const fl = c.createBiquadFilter(); fl.type = 'lowpass';
+            fl.frequency.setValueAtTime(220, t);
+            fl.frequency.exponentialRampToValueAtTime(1400, t + 0.8);
+            const g = c.createGain(); this.env(g, t + 0.1, 0.3, 0.045, 0.8);
+            o.connect(fl); fl.connect(g); g.connect(this.master);
+            o.start(t + 0.1); o.stop(t + 1.4);
+        };
+        pad(110); pad(110.8); pad(165);
+        this.osc('sine', 1200, 1200, t + 0.95, 0.05, 0.04);
     },
     coin(){
         if (!this.ctx) return; const t = this.now();
         this.osc('square', 988, 988, t, 0.06, 0.05);
         this.osc('square', 1319, 1319, t + 0.06, 0.16, 0.05);
+    },
+    inkTick(){
+        if (!this.ctx) return; const t = this.now();
+        this.osc('square', 1900, 1900, t, 0.02, 0.04);
+        this.osc('square', 1300, 1300, t + 0.09, 0.03, 0.035);
+    },
+    fmBlip(){
+        if (!this.ctx) return;
+        this.fmNote(880, this.now(), 0.18, 0.05, false);
+    },
+    sonar32(){
+        if (!this.ctx) return; const t = this.now();
+        this.osc('sine', 900, 900, t, 0.09, 0.045);
+        this.osc('sine', 620, 620, t + 0.22, 0.12, 0.02);
+    },
+    swapFor(v){
+        if (v === 1) this.visionSwap(true);
+        else if (v === 2) this.monoSwap();
+        else if (v === 3) this.gbBoot();
+        else if (v === 4) this.fmSting();
+        else if (v === 5) this.cdBoot();
+        else this.visionSwap(false);
+    },
+    pingFor(v){
+        if (v === 1) this.triPing();
+        else if (v === 2) this.inkTick();
+        else if (v === 3) this.coin();
+        else if (v === 4) this.fmBlip();
+        else if (v === 5) this.sonar32();
+        else this.ping();
     },
     humStart(){
         if (!this.ctx || this.hum) return;
@@ -782,7 +857,7 @@ uniform float uWipe;
 uniform float uTime;
 uniform float uEW;
 uniform vec2 uRes;
-uniform float uPix;
+uniform vec4 uPixels; /* x:mono y:8bit z:16bit w:32bit, розмір клітинки в px */
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
@@ -800,9 +875,21 @@ vec3 palette(float t){
 float Bayer2(vec2 a){ a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
 float Bayer4(vec2 a){ return Bayer2(0.5 * a) * 0.25 + Bayer2(a); }
 
-vec3 modePick(float m, vec3 o, vec3 t, vec3 mo){
+vec2 cellUV(float pix, float off){
+    vec2 c = floor(gl_FragCoord.xy / pix);
+    vec2 u = ((c * pix + pix * 0.5) / uRes) * uUVScale + uUVOff;
+    u.x += off;
+    return u;
+}
+float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+vec3 modePick(float m, vec3 o, vec3 t, vec3 mo, vec3 g, vec3 s, vec3 p){
     vec3 c = mix(o, t, clamp(m, 0.0, 1.0));
-    return mix(c, mo, clamp(m - 1.0, 0.0, 1.0));
+    c = mix(c, mo, clamp(m - 1.0, 0.0, 1.0));
+    c = mix(c, g,  clamp(m - 2.0, 0.0, 1.0));
+    c = mix(c, s,  clamp(m - 3.0, 0.0, 1.0));
+    c = mix(c, p,  clamp(m - 4.0, 0.0, 1.0));
+    return c;
 }
 
 void main(){
@@ -811,43 +898,75 @@ void main(){
     vec2 uv = vUV * uUVScale + uUVOff;
     uv.x += off;
     vec3 c = texture2D(uTex, uv).rgb;
-    float l = dot(c, vec3(0.299, 0.587, 0.114));
+    float l = lum(c);
 
+    /* 0 OPTICAL */
     vec3 opt = mix(vec3(l), c, 0.12);
     opt = (opt - 0.5) * 1.32 + 0.5;
     opt = clamp(opt, 0.0, 1.0) * vec3(0.42, 0.47, 0.56);
 
+    /* 1 THERMAL */
     float lt = pow(clamp(l * 1.15, 0.0, 1.0), 0.8);
     lt += (hash(vUV * vec2(431.0, 917.0) + uTime * 3.0) - 0.5) * 0.05;
     vec3 thr = palette(clamp(lt, 0.0, 1.0));
 
-    /* MONO: піксельна сітка + дизеринг Байєра, чорнило на світлому тлі */
-    vec2 cell = floor(gl_FragCoord.xy / uPix);
-    vec2 uvq = (cell * uPix + uPix * 0.5) / uRes;
-    vec2 suv = uvq * uUVScale + uUVOff;
-    suv.x += off;
-    float lq = dot(texture2D(uTex, suv).rgb, vec3(0.299, 0.587, 0.114));
+    /* 2 MONO: дизеринг Байєра, чорнило на папері */
+    vec2 cM = floor(gl_FragCoord.xy / uPixels.x);
+    float lq = lum(texture2D(uTex, cellUV(uPixels.x, off)).rgb);
     lq = clamp((lq - 0.5) * 1.3 + 0.58, 0.0, 1.0);
-    vec2 fpix = fract(gl_FragCoord.xy / uPix);
-    float dotm = step(max(abs(fpix.x - 0.5), abs(fpix.y - 0.5)), 0.38);
-    float ink = step(lq, Bayer4(cell)) * dotm;
+    vec2 fM = fract(gl_FragCoord.xy / uPixels.x);
+    float dotm = step(max(abs(fM.x - 0.5), abs(fM.y - 0.5)), 0.42);
+    float ink = step(lq, Bayer4(cM)) * dotm;
     vec3 mono = mix(vec3(0.93, 0.92, 0.88), vec3(0.22, 0.20, 0.14), ink);
 
+    /* 3 8-BIT: Game Boy DMG — 4 зелені + LCD-сітка */
+    vec2 cG = floor(gl_FragCoord.xy / uPixels.y);
+    float l8 = lum(texture2D(uTex, cellUV(uPixels.y, off)).rgb);
+    l8 = clamp((l8 - 0.5) * 1.25 + 0.55, 0.0, 1.0);
+    float lv = clamp(floor(l8 * 4.0 + Bayer4(cG) * 0.9), 0.0, 3.0);
+    vec3 gb = mix(mix(vec3(0.06, 0.22, 0.06), vec3(0.19, 0.38, 0.19), step(0.5, lv)),
+                  mix(vec3(0.55, 0.67, 0.06), vec3(0.61, 0.74, 0.06), step(2.5, lv)),
+                  step(1.5, lv));
+    vec2 fG = fract(gl_FragCoord.xy / uPixels.y);
+    gb *= 1.0 - 0.16 * step(0.9, max(fG.x, fG.y));
+
+    /* 4 16-BIT: постеризація 5 рівнів + дизер + CRT-рядки, соковита насиченість */
+    vec2 cS = floor(gl_FragCoord.xy / uPixels.z);
+    vec3 t16 = texture2D(uTex, cellUV(uPixels.z, off)).rgb;
+    t16 = clamp((t16 - 0.5) * 1.25 + 0.52, 0.0, 1.0);
+    t16 = clamp(mix(vec3(lum(t16)), t16, 1.5), 0.0, 1.0);
+    float d16 = (Bayer4(cS) - 0.5) / 5.0;
+    vec3 snes = floor((t16 + d16) * 5.0 + 0.5) / 5.0;
+    snes *= 1.0 - 0.16 * step(0.66, fract(gl_FragCoord.y / 3.0));
+
+    /* 5 32-BIT: PS1 — RGB555 + дизер + афінне тремтіння текстури */
+    vec2 cP = floor(gl_FragCoord.xy / uPixels.w);
+    vec2 uvP = cellUV(uPixels.w, off);
+    uvP += vec2(sin(uvP.y * 40.0 + uTime * 2.0), cos(uvP.x * 36.0 + uTime * 1.7)) * 0.0022;
+    vec3 t32 = texture2D(uTex, uvP).rgb;
+    t32 = clamp((t32 - 0.5) * 1.15 + 0.52, 0.0, 1.0);
+    float dps = (Bayer4(cP) - 0.5) / 31.0 * 1.5;
+    vec3 ps1 = floor((t32 + dps) * 31.0 + 0.5) / 31.0;
+    ps1 *= vec3(0.98, 0.97, 0.93);
+
+    /* wipe зліва направо */
     float edgeN = (hash(vec2(vUV.y * 23.0, floor(uTime * 20.0))) - 0.5) * 0.05;
     float xb = 1.16 * uWipe - 0.08;
     float k = 1.0 - smoothstep(xb - 0.05, xb + 0.05, vUV.x + edgeN);
-    vec3 colA = modePick(uA, opt, thr, mono);
-    vec3 colB = modePick(uB, opt, thr, mono);
+    vec3 colA = modePick(uA, opt, thr, mono, gb, snes, ps1);
+    vec3 colB = modePick(uB, opt, thr, mono, gb, snes, ps1);
     vec3 col = mix(colA, colB, k);
 
     float tr = step(0.001, uWipe) * (1.0 - step(0.999, uWipe));
     float band2 = exp(-pow((vUV.x - xb) * 26.0, 2.0)) * tr;
-    vec3 edgeCol = mix(vec3(1.0, 0.85, 0.5), vec3(-0.6, -0.6, -0.6), step(1.5, max(uA, uB)));
+    float mEdge = max(clamp(1.0 - abs(uA - 2.0), 0.0, 1.0), clamp(1.0 - abs(uB - 2.0), 0.0, 1.0));
+    vec3 edgeCol = mix(vec3(1.0, 0.85, 0.5), vec3(-0.6, -0.6, -0.6), mEdge);
     col += edgeCol * band2 * 0.55;
 
     float d = length(vUV - vec2(0.5, 0.5));
     float vig = smoothstep(0.95, 0.35, d) * 0.35 + 0.65;
-    float monoW = clamp(mix(uA, uB, k) - 1.0, 0.0, 1.0);
+    float mScal = mix(uA, uB, k);
+    float monoW = clamp(1.0 - abs(mScal - 2.0), 0.0, 1.0);
     col *= mix(vig, 1.0, monoW * 0.7);
     gl_FragColor = vec4(col, 1.0);
 }
@@ -886,7 +1005,7 @@ const GL = {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         const U = n => gl.getUniformLocation(pr, n);
-        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW'), uRes: U('uRes'), uPix: U('uPix') };
+        this.uni = { uUVScale: U('uUVScale'), uUVOff: U('uUVOff'), uA: U('uA'), uB: U('uB'), uWipe: U('uWipe'), uTime: U('uTime'), uEW: U('uEW'), uRes: U('uRes'), uPixels: U('uPixels') };
         gl.uniform1i(U('uTex'), 0);
         this.gl = gl; this.ok = true;
         cv.addEventListener('webglcontextlost', () => { this.ok = false; }, false);
@@ -913,7 +1032,11 @@ const GL = {
         gl.uniform1f(this.uni.uTime, now / 1000);
         gl.uniform1f(this.uni.uEW, ST.ew);
         gl.uniform2f(this.uni.uRes, W, H);
-        gl.uniform1f(this.uni.uPix, Math.max(4, Math.round(3 * dpr)));
+        gl.uniform4f(this.uni.uPixels,
+            Math.max(2, Math.round(2 * dpr)),
+            Math.max(5, Math.round(6 * dpr)),
+            Math.max(3, Math.round(3 * dpr)),
+            Math.max(2, Math.round(2 * dpr)));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 };
@@ -924,15 +1047,14 @@ function setVision(v){
     if (v === ST.vis) return;
     ST.wipeFrom = ST.vis; ST.wipeTo = v; ST.vis = v;
     ST.wipeStart = performance.now();
-    if (v === 1) AU.visionSwap(true);
-    else if (v === 2) AU.retroSwap();
-    else AU.visionSwap(false);
+    AU.swapFor(v);
     AU.droneSet(v === 1);
     document.body.classList.toggle('mono', v === 2);
     thermalBtn.classList.toggle('on', v !== 0);
-    thermalBtn.textContent = ['OPT', 'THR', 'MON'][v];
-    visVal.textContent = ['OPTICAL', 'THERMAL', 'MONO'][v];
-    typeLog(v === 1 ? 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА' : v === 2 ? 'МОНОХРОМ. ПРИВІТ З 90-Х' : 'НАЗАД НА ОПТИКУ', v ? 'threat' : 'info');
+    thermalBtn.textContent = VIS_SHORT[v];
+    visVal.textContent = VIS_NAMES[v];
+    const swapMsgs = ['НАЗАД НА ОПТИКУ', 'ТЕПЛОВІЗОР ВРУБИВ. РЕЖИМ ХИЖАКА', 'МОНОХРОМ. ПРИВІТ З 90-Х', '8-BIT. КАРТРИДЖ ПРОДУВ, ПОГНАЛИ', '16-BIT. АРКАДА НА МАКСИМАЛКАХ', '32-BIT. ДИСК РОЗКРУТИВСЯ'];
+    typeLog(swapMsgs[v], v ? 'threat' : 'info');
     if (v === 1) ST.nextClicks = performance.now() + 900;
 }
 
@@ -1196,7 +1318,7 @@ function capturePortrait(t){
         rows.push({ k: 'ITEMS', v: ST.items.length ? ST.items.map(i => i.track.cls).join(',').toUpperCase().slice(0, 15) : '—', red: ST.items.some(i => i.alert) });
     }
     rows.push(
-        { k: 'VIS',    v: ['OPTICAL', 'THERMAL', 'MONO'][ST.vis] },
+        { k: 'VIS',    v: VIS_NAMES[ST.vis] },
         { k: 'SECTOR', v: sec },
         { k: 'LAT',    v: lat.toFixed(5) + '°' },
         { k: 'LON',    v: lon.toFixed(5) + '°' },
@@ -1260,7 +1382,7 @@ function drawAsm(now, dpr){
     } else {
         const n = Math.min(maxN, asmLines.length);
         ctx.font = (7.5 * dpr) + "px 'Share Tech Mono'";
-        ctx.fillStyle = ST.vis === 2 ? 'rgba(30,27,18,0.3)' : 'rgba(255,255,255,0.12)';
+        ctx.fillStyle = ST.vis === 2 ? 'rgba(30,27,18,0.3)' : ST.vis === 3 ? 'rgba(139,172,15,0.22)' : 'rgba(255,255,255,0.12)';
         for (let i = 0; i < n; i++)
             ctx.fillText(asmLines[asmLines.length - n + i], 10 * dpr, (yStart + i * step) * dpr);
     }
@@ -1278,6 +1400,8 @@ function drawSecondary(dpr, T){
         const tier = getThreat(t.cls);
         const col = ST.vis === 2
             ? (tier === 'HIGH' ? 'rgba(20,18,12,0.6)' : 'rgba(45,41,30,0.4)')
+            : ST.vis === 3
+            ? (tier === 'HIGH' ? 'rgba(155,188,15,0.5)' : 'rgba(139,172,15,0.3)')
             : tier === 'HIGH' ? 'rgba(255,80,80,0.4)' : tier === 'MED' ? 'rgba(255,160,0,0.35)' : 'rgba(200,200,255,0.25)';
         ctx.strokeStyle = col; ctx.shadowColor = col; ctx.lineWidth = 1 * dpr;
         ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.strokeRect(rx, ry, rw, rh); ctx.setLineDash([]);
@@ -1381,6 +1505,8 @@ function drawChildren(dpr, T, rr, rg, rb){
         const rx = a.x * dpr, ry = a.y * dpr, rw = (b.x - a.x) * dpr, rh = (b.y - a.y) * dpr;
         const col = ST.vis === 2
             ? (it.alert ? 'rgba(0,0,0,' + (0.55 + 0.35 * pulse) + ')' : 'rgba(45,41,30,0.5)')
+            : ST.vis === 3
+            ? (it.alert ? 'rgba(155,188,15,' + (0.6 + 0.3 * pulse) + ')' : 'rgba(139,172,15,0.45)')
             : it.alert ? 'rgba(255,32,32,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(120,200,255,0.55)';
         ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = it.alert ? 8 : 3;
         ctx.lineWidth = 1 * dpr;
@@ -1552,6 +1678,138 @@ function drawPredReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
     }
 }
 
+/* ── MONO-приціл: креслення/blueprint, маршовий пунктир, сканлінія ── */
+function drawMonoReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.strokeStyle = mainColor; ctx.fillStyle = mainColor;
+    ctx.shadowBlur = 0; ctx.lineCap = 'butt';
+    const R1 = (104 - 20 * lf) * dpr, R2 = (70 - 14 * lf) * dpr;
+    ctx.lineWidth = 1.2 * dpr;
+    ctx.setLineDash([6 * dpr, 5 * dpr]);
+    ctx.lineDashOffset = -pulseTime * 14 * dpr;
+    ctx.beginPath(); ctx.arc(0, 0, R1, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineDashOffset = pulseTime * 10 * dpr;
+    ctx.beginPath(); ctx.arc(0, 0, R2, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    ctx.lineWidth = (1.5 + lf) * dpr;
+    const L = 120 * dpr, gap = 10 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(-L, 0); ctx.lineTo(-gap, 0); ctx.moveTo(gap, 0); ctx.lineTo(L, 0);
+    ctx.moveTo(0, -L); ctx.lineTo(0, -gap); ctx.moveTo(0, gap); ctx.lineTo(0, L);
+    ctx.stroke();
+    ctx.lineWidth = 1 * dpr;
+    for (let i = 1; i <= 5; i++){
+        const d = i * 20 * dpr, t = (i % 2 ? 3 : 6) * dpr;
+        ctx.beginPath();
+        ctx.moveTo(d, -t); ctx.lineTo(d, t); ctx.moveTo(-d, -t); ctx.lineTo(-d, t);
+        ctx.moveTo(-t, d); ctx.lineTo(t, d); ctx.moveTo(-t, -d); ctx.lineTo(t, -d);
+        ctx.stroke();
+    }
+    const sy = Math.sin(pulseTime * 1.6) * R1 * 0.85;
+    const sw = Math.sqrt(Math.max(0, R1 * R1 - sy * sy));
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath(); ctx.moveTo(-sw, sy); ctx.lineTo(sw, sy); ctx.stroke();
+    ctx.globalAlpha = 1;
+    const s = 4 * dpr;
+    if (lf > 0.5) ctx.fillRect(-s, -s, 2 * s, 2 * s);
+    else ctx.strokeRect(-s, -s, 2 * s, 2 * s);
+    ctx.restore();
+}
+
+/* ── 8-BIT приціл: піксель-арт блоками, позиція і анімація квантовані ── */
+function draw8bitReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
+    const P = Math.max(4, Math.round(6 * dpr));
+    const px = Math.round(cx / P) * P, py = Math.round(cy / P) * P;
+    ctx.save(); ctx.translate(px, py);
+    ctx.fillStyle = mainColor; ctx.shadowBlur = 0;
+    const blk = (x, y) => ctx.fillRect(x * P - P / 2, y * P - P / 2, P, P);
+    const fr = Math.floor(pulseTime * 2) % 2;
+    const d = Math.round(13 - 5 * lf) + fr;
+    for (let i = 0; i < 3; i++){
+        blk(-d + i, -d); blk(-d, -d + i);
+        blk(d - i, -d);  blk(d, -d + i);
+        blk(-d + i, d);  blk(-d, d - i);
+        blk(d - i, d);   blk(d, d - i);
+    }
+    if (Math.floor(pulseTime * 4) % 2 === 0) blk(0, 0);
+    blk(-2, 0); blk(2, 0); blk(0, -2); blk(0, 2);
+    if (lf > 0.6){ blk(-1, -1); blk(1, -1); blk(-1, 1); blk(1, 1); }
+    ctx.restore();
+}
+
+/* ── 16-BIT приціл: shmup lock-on — стрілки збігаються, кільце ромбів ── */
+function draw16bitReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.strokeStyle = mainColor; ctx.fillStyle = mainColor;
+    ctx.shadowColor = mainColor; ctx.shadowBlur = 6 + 8 * lf;
+    const n = 8, Rr = (96 - 18 * lf) * dpr;
+    ctx.save(); ctx.rotate(scanAngle * 1.4);
+    for (let i = 0; i < n; i++){
+        const a = i * Math.PI * 2 / n;
+        const x = Math.cos(a) * Rr, y = Math.sin(a) * Rr, s = 4 * dpr;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(pulseTime * 3 + i);
+        ctx.beginPath();
+        ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+    const D = (86 - 40 * lf) * dpr, A = 12 * dpr;
+    for (let i = 0; i < 4; i++){
+        ctx.save(); ctx.rotate(i * Math.PI / 2 + Math.sin(pulseTime * 2) * 0.05 * (1 - lf));
+        ctx.beginPath();
+        ctx.moveTo(0, -D - A); ctx.lineTo(A * 0.7, -D); ctx.lineTo(-A * 0.7, -D);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+    ctx.save(); ctx.rotate(Math.PI / 4 + scanAngle * (1 - lf));
+    const s = (7 + 3 * lf) * dpr;
+    ctx.strokeStyle = mainColor; ctx.lineWidth = 2 * dpr;
+    ctx.strokeRect(-s, -s, 2 * s, 2 * s);
+    ctx.restore();
+    ctx.restore();
+}
+
+/* ── 32-BIT приціл: PS1 лоу-полі — гекси з вертексним снапом і тремтінням ── */
+function draw32bitReticle(cx, cy, dpr, lf, mainColor, rr, rg, rb){
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.strokeStyle = mainColor; ctx.fillStyle = mainColor; ctx.shadowBlur = 0;
+    const snap = 3 * dpr;
+    const qv = v => Math.round(v / snap) * snap;
+    const hex = (R, rot, w, alpha) => {
+        ctx.lineWidth = w; ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++){
+            const a = rot + i * Math.PI / 3;
+            const x = qv(Math.cos(a) * R) + (Math.random() - 0.5) * dpr;
+            const y = qv(Math.sin(a) * R) + (Math.random() - 0.5) * dpr;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath(); ctx.stroke();
+    };
+    const R = (98 - 24 * lf) * dpr;
+    hex(R, scanAngle * (1 - lf * 0.9), 2 * dpr, 0.9);
+    hex(R * 0.72, -scanAngle * 1.5 * (1 - lf * 0.9) + Math.PI / 6, 1.2 * dpr, 0.55);
+    for (let i = 0; i < 3; i++){
+        ctx.save(); ctx.rotate(i * 2 * Math.PI / 3 + scanAngle * 0.5 * (1 - lf));
+        ctx.globalAlpha = 0.35 + 0.3 * lf;
+        ctx.beginPath();
+        ctx.moveTo(qv(0), qv(-R * 0.45));
+        ctx.lineTo(qv(6 * dpr), qv(-R * 0.62));
+        ctx.lineTo(qv(-6 * dpr), qv(-R * 0.62));
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5 * dpr;
+    const c = 8 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(-c, 0); ctx.lineTo(c, 0); ctx.moveTo(0, -c); ctx.lineTo(0, c);
+    ctx.stroke();
+    ctx.restore();
+}
+
 /* ── Тайп-блок біля ретикла ── */
 function drawDataBlock(cx, cy, dpr, mainColor){
     const lines = currentInfo();
@@ -1606,14 +1864,16 @@ function drawEwNoise(W, H, dpr){
 
 function drawCornerDeco(W, H, dpr){
     const s = 30 * dpr;
-    ctx.strokeStyle = ST.vis === 2 ? 'rgba(30,27,18,0.35)' : 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0; ctx.setLineDash([]);
+    ctx.strokeStyle = ST.vis === 2 ? 'rgba(30,27,18,0.35)' : ST.vis === 3 ? 'rgba(139,172,15,0.3)' : 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1 * dpr; ctx.shadowBlur = 0; ctx.setLineDash([]);
     [[0,0,1,1],[W,0,-1,1],[W,H,-1,-1],[0,H,1,-1]].forEach(([x,y,sx,sy]) => {
         ctx.beginPath(); ctx.moveTo(x + sx * s, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * s); ctx.stroke();
     });
-    ctx.strokeStyle = ST.vis === 2 ? 'rgba(30,27,18,0.15)' : 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5 * dpr; ctx.setLineDash([5 * dpr, 15 * dpr]);
+    ctx.strokeStyle = ST.vis === 2 ? 'rgba(30,27,18,0.15)' : ST.vis === 3 ? 'rgba(139,172,15,0.12)' : 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5 * dpr; ctx.setLineDash([5 * dpr, 15 * dpr]);
     ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
     ctx.setLineDash([]);
 }
+
+const RETICLES = [drawReticle, drawPredReticle, drawMonoReticle, draw8bitReticle, draw16bitReticle, draw32bitReticle];
 
 /* ── Головний цикл малювання ── */
 function draw(now){
@@ -1658,6 +1918,9 @@ function draw(now){
     if (ST.vis === 2){
         if (ST.locked){ rr = 15; rg = 13; rb = 8; }
         else { rr = 62; rg = 57; rb = 42; }
+    } else if (ST.vis === 3){
+        if (ST.locked){ rr = 170; rg = 205; rb = 40; }
+        else { rr = 120; rg = 150; rb = 30; }
     }
     const mainColor = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + (0.6 + 0.4 * ST.lockF) + ')';
     const T = coverT();
@@ -1671,8 +1934,7 @@ function draw(now){
     drawSecondary(dpr, T);
     if (p && targetPos.active) drawPrimaryBox(p, dpr, T, mainColor, rr, rg, rb);
     if (ST.locked) drawChildren(dpr, T, rr, rg, rb);
-    if (ST.vis === 1) drawPredReticle(currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
-    else drawReticle(currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
+    RETICLES[ST.vis](currentPos.x * dpr, currentPos.y * dpr, dpr, ST.lockF, mainColor, rr, rg, rb);
     if (ST.lockF > 0.05){
         ctx.globalAlpha = ST.lockF;
         textTick += dt * 0.04;
@@ -1683,7 +1945,7 @@ function draw(now){
     drawCornerDeco(W, H, dpr);
     ctx.restore();
 
-    if (ST.locked && now > ST.nextPing){ if (ST.vis === 1) AU.triPing(); else if (ST.vis === 2) AU.coin(); else AU.ping(); ST.nextPing = now + 2300; }
+    if (ST.locked && now > ST.nextPing){ AU.pingFor(ST.vis); ST.nextPing = now + 2300; }
     if (ST.vis === 1 && now > ST.nextClicks){ AU.clicks(); ST.nextClicks = now + 3800 + Math.random() * 4600; }
 }
 
@@ -1704,7 +1966,7 @@ container.addEventListener('pointerdown', e => {
     }
 });
 botbar.addEventListener('pointerdown', e => e.stopPropagation());
-thermalBtn.addEventListener('click', () => setVision((ST.vis + 1) % 3));
+thermalBtn.addEventListener('click', () => setVision((ST.vis + 1) % 6));
 muteBtn.addEventListener('click', () => {
     const mute = AU.on;
     AU.setMute(mute);
@@ -1713,7 +1975,7 @@ muteBtn.addEventListener('click', () => {
 window.addEventListener('keydown', e => {
     if (!ST.running) return;
     const k = e.key.toLowerCase();
-    if (k === 't' || k === 'е') setVision((ST.vis + 1) % 3);
+    if (k === 't' || k === 'е') setVision((ST.vis + 1) % 6);
     if (k === 'm' || k === 'ь') muteBtn.click();
 });
 document.addEventListener('visibilitychange', async () => {
